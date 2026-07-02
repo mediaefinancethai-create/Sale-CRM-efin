@@ -1,11 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
+
+  // If an invite/recovery link lands here (token in URL hash), forward to the
+  // set-password page (carry the hash so its client can establish the session).
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (
+      hash &&
+      (hash.includes("access_token") ||
+        hash.includes("type=invite") ||
+        hash.includes("type=recovery"))
+    ) {
+      router.replace(`/auth/update-password${hash}`);
+    }
+  }, [router]);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);

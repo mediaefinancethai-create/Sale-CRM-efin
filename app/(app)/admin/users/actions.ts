@@ -12,7 +12,7 @@ export async function inviteUser(email: string, fullName: string, role: Role) {
   const admin = createAdminClient();
   const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { full_name: fullName },
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/login`,
+    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/auth/update-password`,
   });
   if (error) return { error: error.message };
 
