@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* efin green theme — same variable names as the prototype */
+:root {
+  --bg: #f4f7fb;
+  --surface: #ffffff;
+  --line: #d8e0ea;
+  --ink: #142033;
+  --muted: #64748b;
+  --navy: #1e3a07;
+  --blue: #75bc1e;
+  --soft-blue: #eaf3de;
+}
+
+body {
+  color: var(--ink);
+  background: var(--bg);
+  font-family: "Segoe UI", "Leelawadee UI", Tahoma, Arial, sans-serif;
+}
