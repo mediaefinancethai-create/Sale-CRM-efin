@@ -31,16 +31,20 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isLoginPage = pathname === "/login";
-  const isAuthCallback = pathname.startsWith("/auth");
+  // pages reachable without a session
+  const isPublic =
+    pathname === "/login" ||
+    pathname === "/forgot-password" ||
+    pathname.startsWith("/auth");
 
-  if (!user && !isLoginPage && !isAuthCallback) {
+  if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  if (user && isLoginPage) {
+  // logged-in users shouldn't sit on login / forgot-password
+  if (user && (pathname === "/login" || pathname === "/forgot-password")) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);

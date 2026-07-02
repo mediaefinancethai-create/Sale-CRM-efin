@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+
+const REMEMBER_KEY = "efin-crm-remember-email";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,8 +26,18 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // prefill remembered email
+  useEffect(() => {
+    const saved = localStorage.getItem(REMEMBER_KEY);
+    if (saved) {
+      setEmail(saved);
+      setRemember(true);
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,6 +59,9 @@ export default function LoginPage() {
       setLoading(false);
       return;
     }
+    // remember me = keep the email prefilled next time (never store the password)
+    if (remember) localStorage.setItem(REMEMBER_KEY, email);
+    else localStorage.removeItem(REMEMBER_KEY);
     router.push("/dashboard");
     router.refresh();
   }
@@ -95,6 +111,24 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand"
             />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 text-sm text-muted">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+                className="h-4 w-4 accent-[var(--blue)]"
+              />
+              จดจำอีเมล
+            </label>
+            <Link
+              href="/forgot-password"
+              className="text-sm text-brand hover:underline"
+            >
+              ลืมรหัสผ่าน?
+            </Link>
           </div>
 
           {error && (
