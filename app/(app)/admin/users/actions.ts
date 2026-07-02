@@ -53,3 +53,16 @@ export async function deleteUser(userId: string) {
   revalidatePath("/admin/users");
   return { error: error?.message ?? null };
 }
+
+// Set/reset a user's password. Admin-only; runs with service role on the server.
+export async function setUserPassword(userId: string, newPassword: string) {
+  await requireAdmin();
+  if (newPassword.length < 8)
+    return { error: "รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร" };
+
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    password: newPassword,
+  });
+  return { error: error?.message ?? null };
+}

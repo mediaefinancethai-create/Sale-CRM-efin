@@ -6,6 +6,7 @@ import { Card } from "@/components/ui";
 import {
   deleteUser,
   inviteUser,
+  setUserPassword,
   setUserRole,
 } from "@/app/(app)/admin/users/actions";
 
@@ -20,6 +21,7 @@ export function UsersView({
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<Role>("staff");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pwUser, setPwUser] = useState<Profile | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function invite(e: React.FormEvent) {
@@ -178,17 +180,24 @@ export function UsersView({
                     )}
                   </td>
                   <td className="py-2">
-                    {u.id === me.id ? (
-                      <span className="text-xs text-muted">—</span>
-                    ) : (
+                    <span className="inline-flex gap-1">
                       <button
-                        onClick={() => removeUser(u)}
+                        onClick={() => setPwUser(u)}
                         disabled={isPending}
-                        className="rounded border border-line px-2 py-0.5 text-[11px] text-red-600 hover:border-red-400 disabled:opacity-50"
+                        className="rounded border border-line px-2 py-0.5 text-[11px] hover:border-brand disabled:opacity-50"
                       >
-                        ลบผู้ใช้
+                        ตั้งรหัสผ่าน
                       </button>
-                    )}
+                      {u.id !== me.id && (
+                        <button
+                          onClick={() => removeUser(u)}
+                          disabled={isPending}
+                          className="rounded border border-line px-2 py-0.5 text-[11px] text-red-600 hover:border-red-400 disabled:opacity-50"
+                        >
+                          ลบผู้ใช้
+                        </button>
+                      )}
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -196,6 +205,108 @@ export function UsersView({
           </table>
         </div>
       </Card>
+
+      {pwUser && (
+        <SetPasswordModal user={pwUser} onClose={() => setPwUser(null)} />
+      )}
+    </div>
+  );
+}
+
+function SetPasswordModal({
+  user,
+  onClose,
+}: {
+  user: Profile;
+  onClose: () => void;
+}) {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (password.length < 8) {
+      setError("รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร");
+      return;
+    }
+    if (password !== confirm) {
+      setError("รหัสผ่านทั้งสองช่องไม่ตรงกัน");
+      return;
+    }
+    startTransition(async () => {
+      const res = await setUserPassword(user.id, password);
+      if (res.error) setError(res.error);
+      else {
+        setDone(true);
+        setTimeout(onClose, 1200);
+      }
+    });
+  }
+
+  const input =
+    "w-full rounded-lg border border-line px-2.5 py-1.5 text-sm outline-none focus:border-brand";
+  const label = "mb-1 block text-xs font-medium text-muted";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-xl">
+        <h2 className="mb-1 text-base font-bold text-navy">ตั้งรหัสผ่าน</h2>
+        <p className="mb-4 text-xs text-muted">{user.email}</p>
+        {done ? (
+          <p className="rounded-lg bg-brand/10 px-3 py-2 text-sm text-navy">
+            ตั้งรหัสผ่านใหม่เรียบร้อยแล้ว
+          </p>
+        ) : (
+          <form onSubmit={submit} className="space-y-3">
+            <div>
+              <label className={label}>รหัสผ่านใหม่</label>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={input}
+                placeholder="อย่างน้อย 8 ตัวอักษร"
+              />
+            </div>
+            <div>
+              <label className={label}>ยืนยันรหัสผ่าน</label>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                className={input}
+              />
+            </div>
+            {error && (
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+                {error}
+              </p>
+            )}
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg border border-line px-4 py-2 text-sm hover:bg-bg"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="submit"
+                disabled={isPending}
+                className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {isPending ? "กำลังบันทึก..." : "บันทึก"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   );
 }
