@@ -42,3 +42,14 @@ export async function setUserRole(userId: string, role: Role) {
   revalidatePath("/admin/users");
   return { error: error?.message ?? null };
 }
+
+// Permanently delete a user (any role). Admin-only; cascades to their profile.
+export async function deleteUser(userId: string) {
+  const me = await requireAdmin();
+  if (userId === me.id) return { error: "ไม่สามารถลบบัญชีของตัวเองได้" };
+
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.deleteUser(userId);
+  revalidatePath("/admin/users");
+  return { error: error?.message ?? null };
+}

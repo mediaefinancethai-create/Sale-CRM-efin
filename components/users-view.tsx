@@ -3,7 +3,11 @@
 import { useState, useTransition } from "react";
 import type { Profile, Role } from "@/lib/types";
 import { Card } from "@/components/ui";
-import { inviteUser, setUserRole } from "@/app/(app)/admin/users/actions";
+import {
+  deleteUser,
+  inviteUser,
+  setUserRole,
+} from "@/app/(app)/admin/users/actions";
 
 export function UsersView({
   me,
@@ -37,6 +41,19 @@ export function UsersView({
     startTransition(async () => {
       const res = await setUserRole(userId, newRole);
       if (res.error) alert(`เปลี่ยน role ไม่สำเร็จ: ${res.error}`);
+    });
+  }
+
+  function removeUser(u: Profile) {
+    if (
+      !confirm(
+        `ลบผู้ใช้ "${u.email}" (${u.role}) ออกจากระบบถาวร?\nข้อมูลที่ผู้ใช้นี้สร้างจะยังอยู่ แต่จะเข้าสู่ระบบไม่ได้อีก`
+      )
+    )
+      return;
+    startTransition(async () => {
+      const res = await deleteUser(u.id);
+      if (res.error) alert(`ลบผู้ใช้ไม่สำเร็จ: ${res.error}`);
     });
   }
 
@@ -116,7 +133,8 @@ export function UsersView({
                 <th className="pb-2 pr-2">ชื่อ</th>
                 <th className="pb-2 pr-2">อีเมล</th>
                 <th className="pb-2 pr-2">Role</th>
-                <th className="pb-2">เปลี่ยน role</th>
+                <th className="pb-2 pr-2">เปลี่ยน role</th>
+                <th className="pb-2">จัดการ</th>
               </tr>
             </thead>
             <tbody>
@@ -157,6 +175,19 @@ export function UsersView({
                         <option value="staff">staff</option>
                         <option value="admin">admin</option>
                       </select>
+                    )}
+                  </td>
+                  <td className="py-2">
+                    {u.id === me.id ? (
+                      <span className="text-xs text-muted">—</span>
+                    ) : (
+                      <button
+                        onClick={() => removeUser(u)}
+                        disabled={isPending}
+                        className="rounded border border-line px-2 py-0.5 text-[11px] text-red-600 hover:border-red-400 disabled:opacity-50"
+                      >
+                        ลบผู้ใช้
+                      </button>
                     )}
                   </td>
                 </tr>
