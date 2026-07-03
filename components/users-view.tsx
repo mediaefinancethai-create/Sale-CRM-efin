@@ -4,11 +4,14 @@ import { useState, useTransition } from "react";
 import type { Profile, Role } from "@/lib/types";
 import { Card } from "@/components/ui";
 import {
+  createUserWithPassword,
   deleteUser,
   inviteUser,
   setUserPassword,
   setUserRole,
 } from "@/app/(app)/admin/users/actions";
+
+type AddMode = "invite" | "password";
 
 export function UsersView({
   me,
@@ -20,21 +23,40 @@ export function UsersView({
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<Role>("staff");
+  const [mode, setMode] = useState<AddMode>("invite");
+  const [newPw, setNewPw] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pwUser, setPwUser] = useState<Profile | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  function resetForm() {
+    setEmail("");
+    setFullName("");
+    setRole("staff");
+    setNewPw("");
+  }
 
   function invite(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
     startTransition(async () => {
+      if (mode === "password") {
+        const res = await createUserWithPassword(email, fullName, role, newPw);
+        if (res.error) setMsg({ ok: false, text: res.error });
+        else {
+          setMsg({
+            ok: true,
+            text: `สร้างผู้ใช้ ${email} แล้ว (แจ้งรหัสผ่านให้เจ้าตัวและให้เปลี่ยนหลังเข้าใช้)`,
+          });
+          resetForm();
+        }
+        return;
+      }
       const res = await inviteUser(email, fullName, role);
       if (res.error) setMsg({ ok: false, text: res.error });
       else {
         setMsg({ ok: true, text: `ส่งคำเชิญไปที่ ${email} แล้ว` });
-        setEmail("");
-        setFullName("");
-        setRole("staff");
+        resetForm();
       }
     });
   }
@@ -68,11 +90,36 @@ export function UsersView({
       <header>
         <h1 className="text-lg font-bold text-navy">จัดการผู้ใช้ (Admin)</h1>
         <p className="text-sm text-muted">
-          เชิญผู้ใช้ใหม่และกำหนดสิทธิ์ · ผู้ถูกเชิญจะได้อีเมลตั้งรหัสผ่าน
+          เพิ่มผู้ใช้ใหม่และกำหนดสิทธิ์ · เลือกส่งคำเชิญทางอีเมล หรือตั้งรหัสผ่านให้เลย
         </p>
       </header>
 
-      <Card title="เชิญผู้ใช้ใหม่" pill="admin เท่านั้น">
+      <Card title="เพิ่มผู้ใช้ใหม่" pill="admin เท่านั้น">
+        <div className="mb-3 inline-flex rounded-lg border border-line p-0.5 text-xs">
+          <button
+            type="button"
+            onClick={() => setMode("invite")}
+            className={`rounded-md px-3 py-1.5 font-medium ${
+              mode === "invite" ? "bg-brand text-white" : "text-muted"
+            }`}
+          >
+            ส่งคำเชิญทางอีเมล
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("password")}
+            className={`rounded-md px-3 py-1.5 font-medium ${
+              mode === "password" ? "bg-brand text-white" : "text-muted"
+            }`}
+          >
+            ตั้งรหัสผ่านให้เลย
+          </button>
+        </div>
+        {mode === "password" && (
+          <p className="mb-3 rounded-lg bg-soft px-3 py-2 text-xs text-navy">
+            สร้างบัญชีพร้อมรหัสผ่านทันที ไม่ต้องพึ่งลิงก์อีเมล (เหมาะกับกรณีอีเมลองค์กรกินลิงก์เชิญ) — แจ้งรหัสผ่านให้ผู้ใช้แล้วให้เปลี่ยนหลังเข้าใช้
+          </p>
+        )}
         <form onSubmit={invite} className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <div className="col-span-2">
             <label className={label}>อีเมล</label>
@@ -104,6 +151,19 @@ export function UsersView({
               <option value="admin">admin</option>
             </select>
           </div>
+          {mode === "password" && (
+            <div className="col-span-2 md:col-span-4">
+              <label className={label}>รหัสผ่าน (อย่างน้อย 8 ตัวอักษร)</label>
+              <input
+                type="text"
+                required
+                value={newPw}
+                onChange={(e) => setNewPw(e.target.value)}
+                className={input}
+                placeholder="รหัสผ่านชั่วคราวสำหรับผู้ใช้"
+              />
+            </div>
+          )}
           {msg && (
             <p
               className={`col-span-2 rounded-lg px-3 py-2 text-sm md:col-span-4 ${
@@ -121,7 +181,11 @@ export function UsersView({
               disabled={isPending}
               className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
             >
-              {isPending ? "กำลังส่งคำเชิญ..." : "ส่งคำเชิญ"}
+              {isPending
+                ? "กำลังบันทึก..."
+                : mode === "password"
+                  ? "สร้างผู้ใช้"
+                  : "ส่งคำเชิญ"}
             </button>
           </div>
         </form>

@@ -43,6 +43,48 @@ export async function inviteUser(email: string, fullName: string, role: Role) {
   return { error: null };
 }
 
+// Create a user directly with a password (no email link). Admin-only.
+// Reliable onboarding when corporate email scanners consume invite links.
+export async function createUserWithPassword(
+  email: string,
+  fullName: string,
+  role: Role,
+  password: string
+) {
+  await requireAdmin();
+  if (password.length < 8)
+    return { error: "รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร" };
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true, // skip email verification
+    user_metadata: { full_name: fullName },
+  });
+  if (error) {
+    return {
+      error: /already|registered|exists/i.test(error.message)
+        ? "มีผู้ใช้อีเมลนี้อยู่แล้ว"
+        : error.message,
+    };
+  }
+
+  // ensure profile + requested role (trigger defaults to 'staff')
+  if (data.user) {
+    const { error: roleErr } = await admin
+      .from("profiles")
+      .upsert(
+        { id: data.user.id, email, full_name: fullName, role },
+        { onConflict: "id" }
+      );
+    if (roleErr) return { error: roleErr.message };
+  }
+
+  revalidatePath("/admin/users");
+  return { error: null };
+}
+
 export async function setUserRole(userId: string, role: Role) {
   const me = await requireAdmin();
   if (userId === me.id)
