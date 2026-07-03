@@ -7,6 +7,7 @@ import {
   createUserWithPassword,
   deleteUser,
   inviteUser,
+  setUserName,
   setUserPassword,
   setUserRole,
 } from "@/app/(app)/admin/users/actions";
@@ -27,6 +28,7 @@ export function UsersView({
   const [newPw, setNewPw] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pwUser, setPwUser] = useState<Profile | null>(null);
+  const [nameUser, setNameUser] = useState<Profile | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function resetForm() {
@@ -246,6 +248,13 @@ export function UsersView({
                   <td className="py-2">
                     <span className="inline-flex gap-1">
                       <button
+                        onClick={() => setNameUser(u)}
+                        disabled={isPending}
+                        className="rounded border border-line px-2 py-0.5 text-[11px] hover:border-brand disabled:opacity-50"
+                      >
+                        แก้ชื่อ
+                      </button>
+                      <button
                         onClick={() => setPwUser(u)}
                         disabled={isPending}
                         className="rounded border border-line px-2 py-0.5 text-[11px] hover:border-brand disabled:opacity-50"
@@ -273,6 +282,78 @@ export function UsersView({
       {pwUser && (
         <SetPasswordModal user={pwUser} onClose={() => setPwUser(null)} />
       )}
+      {nameUser && (
+        <SetNameModal user={nameUser} onClose={() => setNameUser(null)} />
+      )}
+    </div>
+  );
+}
+
+function SetNameModal({
+  user,
+  onClose,
+}: {
+  user: Profile;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(user.full_name ?? "");
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    startTransition(async () => {
+      const res = await setUserName(user.id, name.trim());
+      if (res.error) setError(res.error);
+      else onClose();
+    });
+  }
+
+  const input =
+    "w-full rounded-lg border border-line px-2.5 py-1.5 text-sm outline-none focus:border-brand";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-xl">
+        <h2 className="mb-1 text-base font-bold text-navy">แก้ชื่อผู้ใช้</h2>
+        <p className="mb-4 text-xs text-muted">{user.email}</p>
+        <form onSubmit={submit} className="space-y-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted">
+              ชื่อ-สกุล
+            </label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={input}
+              placeholder="เช่น Patima Suksai"
+              autoFocus
+            />
+          </div>
+          {error && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+              {error}
+            </p>
+          )}
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-line px-4 py-2 text-sm hover:bg-bg"
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {isPending ? "กำลังบันทึก..." : "บันทึก"}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

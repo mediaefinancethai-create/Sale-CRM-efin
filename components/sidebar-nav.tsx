@@ -15,9 +15,19 @@ const MENU = [
 export function SidebarNav({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
 
+  const account = {
+    href: "/account",
+    key: "S",
+    label: "ตั้งค่าบัญชี",
+    desc: "เปลี่ยนรหัสผ่านของฉัน",
+  };
   const items = isAdmin
-    ? [...MENU, { href: "/admin/users", key: "U", label: "Users", desc: "จัดการผู้ใช้ (admin)" }]
-    : MENU;
+    ? [
+        ...MENU,
+        { href: "/admin/users", key: "U", label: "Users", desc: "จัดการผู้ใช้ (admin)" },
+        account,
+      ]
+    : [...MENU, account];
 
   return (
     <nav className="flex-1 space-y-1 px-3">

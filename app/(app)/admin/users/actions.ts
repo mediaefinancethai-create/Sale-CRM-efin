@@ -110,6 +110,22 @@ export async function deleteUser(userId: string) {
   return { error: error?.message ?? null };
 }
 
+// Change a user's display name. Admin-only.
+export async function setUserName(userId: string, fullName: string) {
+  await requireAdmin();
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("profiles")
+    .update({ full_name: fullName })
+    .eq("id", userId);
+  // keep auth metadata in sync (best-effort)
+  await admin.auth.admin.updateUserById(userId, {
+    user_metadata: { full_name: fullName },
+  });
+  revalidatePath("/admin/users");
+  return { error: error?.message ?? null };
+}
+
 // Set/reset a user's password. Admin-only; runs with service role on the server.
 export async function setUserPassword(userId: string, newPassword: string) {
   await requireAdmin();
