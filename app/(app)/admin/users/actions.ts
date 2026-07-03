@@ -14,7 +14,21 @@ export async function inviteUser(email: string, fullName: string, role: Role) {
     data: { full_name: fullName },
     redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/auth/update-password`,
   });
-  if (error) return { error: error.message };
+  if (error) {
+    const raw = (error.message || "").trim();
+    // GoTrue returns 500 with an empty body ("{}") when the invite email
+    // cannot be sent (SMTP not configured / rate limited / delivery failed)
+    const emailFailed =
+      raw === "" ||
+      raw === "{}" ||
+      error.status === 500 ||
+      /rate limit|sending|smtp|email/i.test(raw);
+    return {
+      error: emailFailed
+        ? "ส่งอีเมลเชิญไม่สำเร็จ — ระบบอีเมลยังไม่พร้อม (ยังไม่ได้ตั้ง SMTP หรือติด rate limit) กรุณาตั้ง custom SMTP หรือให้แอดมินสร้างผู้ใช้พร้อมรหัสผ่านแทน"
+        : raw,
+    };
+  }
 
   // set requested role on the auto-created profile (trigger defaults to 'staff')
   if (role === "admin" && data.user) {
