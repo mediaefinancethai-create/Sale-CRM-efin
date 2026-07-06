@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import {
   FORECASTS,
@@ -284,7 +285,19 @@ export function OpportunitiesView({
                 return (
                   <tr key={o.id} className="border-b border-line/60 align-top">
                     <td className="py-2 pr-2 text-muted">{o.deal_no}</td>
-                    <td className="py-2 pr-2 font-medium">{o.account_name}</td>
+                    <td className="py-2 pr-2 font-medium">
+                      {o.account_id ? (
+                        <Link
+                          href={`/accounts/${o.account_id}`}
+                          className="hover:text-brand hover:underline"
+                          title="ดูข้อมูลบริษัทนี้ทั้งหมด"
+                        >
+                          {o.account_name}
+                        </Link>
+                      ) : (
+                        o.account_name
+                      )}
+                    </td>
                     <td className="py-2 pr-2">{o.owner || "—"}</td>
                     <td className="py-2 pr-2">{o.product}</td>
                     <td className="py-2 pr-2 text-xs text-muted">

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { baht, REVENUE_PLAN } from "@/lib/constants";
 import type { Opportunity } from "@/lib/types";
 import { BarRows, Card, Kpi, StagePill } from "@/components/ui";
+import { RevenueDashboard } from "@/components/revenue-dashboard";
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -90,6 +91,15 @@ export default async function DashboardPage() {
           />
         </Card>
       </div>
+
+      {/* block 3: revenue by month / year */}
+      <RevenueDashboard
+        won={won.map((o) => ({
+          amount: Number(o.amount || 0),
+          close_date: o.close_date,
+          month: o.month,
+        }))}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="งานที่ต้องตามวันนี้" pill={`${urgent.length} รายการ`}>

@@ -18,9 +18,13 @@ function humanSize(n: number | null): string {
 export function AttachmentsSection({
   accountId,
   attachments,
+  title = "ไฟล์แนบ / เอกสาร",
+  pill,
 }: {
-  accountId: string;
+  accountId: string | null;
   attachments: Attachment[];
+  title?: string;
+  pill?: string;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -42,9 +46,9 @@ export function AttachmentsSection({
       setBusy(false);
       return;
     }
-    // unique path: <accountId>/<uuid>-<filename>
+    // unique path: <accountId|library>/<uuid>-<filename>
     const safeName = file.name.replace(/[^\w.\-]+/g, "_");
-    const path = `${accountId}/${crypto.randomUUID()}-${safeName}`;
+    const path = `${accountId ?? "library"}/${crypto.randomUUID()}-${safeName}`;
     const up = await supabase.storage.from(BUCKET).upload(path, file, {
       contentType: file.type || undefined,
       upsert: false,
@@ -99,7 +103,7 @@ export function AttachmentsSection({
   }
 
   return (
-    <Card title="ไฟล์แนบ / เอกสาร" pill={`${attachments.length} ไฟล์`}>
+    <Card title={title} pill={pill ?? `${attachments.length} ไฟล์`}>
       <div className="mb-3">
         <input
           ref={inputRef}

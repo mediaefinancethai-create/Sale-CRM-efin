@@ -3,8 +3,15 @@
 import { useMemo, useState, useTransition } from "react";
 import { SUBSETS, baht } from "@/lib/constants";
 import { canModify } from "@/lib/rbac";
-import type { IdeaPackage, Opportunity, Package, Profile } from "@/lib/types";
+import type {
+  Attachment,
+  IdeaPackage,
+  Opportunity,
+  Package,
+  Profile,
+} from "@/lib/types";
 import { Card } from "@/components/ui";
+import { AttachmentsSection } from "@/components/attachments-section";
 import {
   addIdeaPackage,
   deleteIdeaPackage,
@@ -18,20 +25,29 @@ export function PackagesView({
   packages,
   ideas,
   wonOpps,
+  docs,
 }: {
   profile: Profile;
   packages: Package[];
   ideas: IdeaPackage[];
   wonOpps: WonLite[];
+  docs: Attachment[];
 }) {
   return (
     <div className="space-y-5">
       <header>
         <h1 className="text-lg font-bold text-navy">Package Library</h1>
         <p className="text-sm text-muted">
-          ช่วย AE จัดแพ็กเกจ — งบ · ยอดนิยม · ไอเดียใหม่
+          ช่วย AE จัดแพ็กเกจ — เอกสาร · งบ · ยอดนิยม · ไอเดียใหม่
         </p>
       </header>
+
+      <AttachmentsSection
+        accountId={null}
+        attachments={docs}
+        title="เอกสาร (ใบเสนอราคา QU / Sale Order SO / อื่นๆ)"
+        pill={`${docs.length} ไฟล์`}
+      />
 
       <BudgetFinder packages={packages} wonOpps={wonOpps} />
       <Catalog packages={packages} wonOpps={wonOpps} />
