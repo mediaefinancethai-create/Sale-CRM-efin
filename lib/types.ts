@@ -126,6 +126,17 @@ export interface IdeaPackage {
   updated_at: string;
 }
 
+export interface Attachment {
+  id: string;
+  account_id: string | null;
+  file_name: string;
+  storage_path: string;
+  content_type: string | null;
+  size: number | null;
+  uploaded_by: string | null;
+  created_at: string;
+}
+
 export interface Lead {
   id: string;
   legacy_id: string | null;

@@ -34,7 +34,7 @@ export function PackagesView({
       </header>
 
       <BudgetFinder packages={packages} wonOpps={wonOpps} />
-      <Catalog packages={packages} />
+      <Catalog packages={packages} wonOpps={wonOpps} />
       <IdeaPackages profile={profile} ideas={ideas} />
     </div>
   );
@@ -77,7 +77,33 @@ function BudgetFinder({
       .map(([product, v]) => ({ product, ...v }))
       .sort((a, b2) => b2.count - a.count || b2.total - a.total);
 
-    return { fit, popular, nearCount: near.length };
+    // popularity per subset across ALL Closed Won (how often each subset actually sells)
+    const subsetPopularity = new Map<string, number>();
+    for (const o of wonOpps) {
+      if (o.subset)
+        subsetPopularity.set(o.subset, (subsetPopularity.get(o.subset) ?? 0) + 1);
+    }
+
+    // suggest a combo of catalog packages that fits the budget, preferring
+    // packages in the most-popular subsets (what customers actually buy)
+    const priced = packages.filter((p) => (p.list_price ?? 0) > 0);
+    const ranked = [...priced].sort((a, c) => {
+      const pa = subsetPopularity.get(a.subset ?? "") ?? 0;
+      const pc = subsetPopularity.get(c.subset ?? "") ?? 0;
+      if (pc !== pa) return pc - pa; // more popular subset first
+      return (c.list_price ?? 0) - (a.list_price ?? 0); // then bigger item
+    });
+    const combo: Package[] = [];
+    let comboTotal = 0;
+    for (const p of ranked) {
+      const price = p.list_price ?? 0;
+      if (comboTotal + price <= b) {
+        combo.push(p);
+        comboTotal += price;
+      }
+    }
+
+    return { fit, popular, nearCount: near.length, combo, comboTotal };
   }, [submitted, packages, wonOpps]);
 
   return (
@@ -108,7 +134,52 @@ function BudgetFinder({
       </div>
 
       {result && (
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <div className="mt-4 space-y-4">
+          {/* suggested combo to fill the budget, weighted by popularity */}
+          <div className="rounded-xl border border-brand/40 bg-soft/50 p-3">
+            <h3 className="mb-2 text-sm font-bold text-navy">
+              ชุดแพ็กเกจแนะนำให้พอดีงบ · เน้นหมวดยอดนิยม
+            </h3>
+            {result.combo.length === 0 ? (
+              <p className="text-sm text-muted">
+                ไม่มีแพ็กเกจที่จัดเข้าในงบนี้ได้
+              </p>
+            ) : (
+              <>
+                <ul className="mb-2 space-y-1.5">
+                  {result.combo.map((p) => (
+                    <li
+                      key={p.id}
+                      className="flex items-center justify-between gap-2 text-sm"
+                    >
+                      <span>
+                        <span className="font-medium">{p.name}</span>
+                        <span className="ml-2 rounded-full bg-white px-2 py-0.5 text-[10px] text-navy">
+                          {p.subset}
+                        </span>
+                      </span>
+                      <span className="font-medium text-navy">
+                        ฿{baht(p.list_price)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex items-center justify-between border-t border-brand/30 pt-2 text-sm">
+                  <span className="font-bold text-navy">
+                    รวม {result.combo.length} รายการ
+                  </span>
+                  <span className="font-bold text-navy">
+                    ฿{baht(result.comboTotal)}{" "}
+                    <span className="text-xs font-normal text-muted">
+                      (เหลืองบ ฿{baht(Math.max(0, submitted! - result.comboTotal))})
+                    </span>
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
           <div>
             <h3 className="mb-2 text-sm font-bold text-navy">
               แพ็กเกจที่เข้างบ ({result.fit.length})
@@ -161,6 +232,7 @@ function BudgetFinder({
               </ul>
             )}
           </div>
+          </div>
         </div>
       )}
     </Card>
@@ -169,7 +241,27 @@ function BudgetFinder({
 
 // ---------- 2) Catalog ----------
 
-function Catalog({ packages }: { packages: Package[] }) {
+function Catalog({
+  packages,
+  wonOpps,
+}: {
+  packages: Package[];
+  wonOpps: WonLite[];
+}) {
+  // real Closed Won sales grouped by subset (customer, product, amount)
+  const salesBySubset = useMemo(() => {
+    const map = new Map<string, WonLite[]>();
+    for (const o of wonOpps) {
+      const key = o.subset ?? "อื่น ๆ";
+      const arr = map.get(key) ?? [];
+      arr.push(o);
+      map.set(key, arr);
+    }
+    for (const arr of map.values())
+      arr.sort((a, b) => Number(b.amount) - Number(a.amount));
+    return map;
+  }, [wonOpps]);
+
   const grouped = useMemo(() => {
     const map = new Map<string, Package[]>();
     for (const p of packages) {
@@ -222,6 +314,39 @@ function Catalog({ packages }: { packages: Package[] }) {
                       {p.source}
                     </span>
                   </div>
+
+                  {(() => {
+                    const sales = salesBySubset.get(p.subset ?? "อื่น ๆ") ?? [];
+                    const total = sales.reduce(
+                      (s, o) => s + Number(o.amount),
+                      0
+                    );
+                    if (sales.length === 0) return null;
+                    return (
+                      <details className="mt-2 border-t border-line pt-2">
+                        <summary className="cursor-pointer text-[11px] font-medium text-brand">
+                          การขายจริงหมวดนี้ · {sales.length} ดีล · ฿
+                          {baht(total)}
+                        </summary>
+                        <ul className="mt-1.5 space-y-1">
+                          {sales.map((o, i) => (
+                            <li
+                              key={i}
+                              className="flex items-center justify-between gap-2 text-[11px]"
+                            >
+                              <span className="min-w-0 truncate text-muted">
+                                {o.account_name}
+                                {o.product ? ` · ${o.product}` : ""}
+                              </span>
+                              <span className="whitespace-nowrap font-medium text-navy">
+                                ฿{baht(o.amount)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    );
+                  })()}
                 </div>
               ))}
             </div>

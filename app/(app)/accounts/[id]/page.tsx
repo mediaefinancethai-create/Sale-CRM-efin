@@ -7,10 +7,12 @@ import type {
   Account,
   AccountContact,
   AccountNote,
+  Attachment,
   Opportunity,
 } from "@/lib/types";
 import { Card } from "@/components/ui";
 import { ContactsSection, NotesSection } from "@/components/account-detail";
+import { AttachmentsSection } from "@/components/attachments-section";
 
 export default async function AccountDetailPage({
   params,
@@ -27,7 +29,7 @@ export default async function AccountDetailPage({
     .maybeSingle();
   if (!account) notFound();
 
-  const [{ data: contacts }, { data: notes }, { data: wonOpps }] =
+  const [{ data: contacts }, { data: notes }, { data: wonOpps }, { data: files }] =
     await Promise.all([
       supabase
         .from("account_contacts")
@@ -47,6 +49,11 @@ export default async function AccountDetailPage({
         .eq("account_id", params.id)
         .eq("stage", "Closed Won")
         .order("close_date", { ascending: false }),
+      supabase
+        .from("attachments")
+        .select("*")
+        .eq("account_id", params.id)
+        .order("created_at", { ascending: false }),
     ]);
 
   const acc = account as Account;
@@ -114,6 +121,11 @@ export default async function AccountDetailPage({
           </div>
         )}
       </Card>
+
+      <AttachmentsSection
+        accountId={acc.id}
+        attachments={(files ?? []) as Attachment[]}
+      />
 
       <NotesSection
         profile={profile}
