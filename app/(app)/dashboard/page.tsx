@@ -98,6 +98,9 @@ export default async function DashboardPage() {
           amount: Number(o.amount || 0),
           close_date: o.close_date,
           month: o.month,
+          week: o.week,
+          product: o.product,
+          account_name: o.account_name,
         }))}
       />
 
