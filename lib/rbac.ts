@@ -7,12 +7,12 @@ export function isAdmin(profile: Profile | null): boolean {
   return profile?.role === "admin";
 }
 
-// staff can edit/delete only records they created; admin can do anything
+// Any authenticated user may edit/delete business data (accounts, opportunities,
+// contacts, notes, packages, leads). Enforced at the DB by RLS too.
+// User management stays admin-only and is gated separately (requireAdmin).
 export function canModify(
   profile: Profile | null,
-  createdBy: string | null
+  _createdBy?: string | null
 ): boolean {
-  if (!profile) return false;
-  if (profile.role === "admin") return true;
-  return createdBy !== null && createdBy === profile.id;
+  return !!profile;
 }
