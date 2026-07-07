@@ -6,11 +6,8 @@ import { Card, Kpi } from "@/components/ui";
 
 type WonLite = {
   amount: number;
-  close_date: string | null;
-  month: string | null;
-  week: string | null;
+  created_at: string | null; // date the deal was keyed into the system
   product: string | null;
-  account_name: string | null;
 };
 
 type View = "week" | "month" | "year";
@@ -37,30 +34,20 @@ function isoWeek(d: Date): { year: number; week: number } {
   return { year: date.getUTCFullYear(), week };
 }
 
-// derive the period bucket {key, sort, label} for an opp at a given granularity
+// derive the period bucket {key, sort, label} from the record's entry date
+// (created_at) at a given granularity
 function bucketOf(o: WonLite, view: View): { key: string; sort: number; label: string } | null {
-  // resolve year + month from close_date, fallback to "Mon-YYYY"
-  let year: number | null = null;
-  let month: number | null = null;
-  if (o.close_date && /^\d{4}-\d{2}/.test(o.close_date)) {
-    year = +o.close_date.slice(0, 4);
-    month = +o.close_date.slice(5, 7) - 1;
-  } else if (o.month) {
-    const [mon, yr] = o.month.split("-");
-    const mi = MONTH_ABBR.indexOf(mon);
-    if (mi >= 0 && yr) {
-      year = +yr;
-      month = mi;
-    }
-  }
+  if (!o.created_at) return null;
+  const d = new Date(o.created_at);
+  if (Number.isNaN(d.getTime())) return null;
+  const year = d.getFullYear();
+  const month = d.getMonth();
 
   if (view === "year") {
-    if (year == null) return null;
     return { key: `${year}`, sort: year, label: `${year}` };
   }
 
   if (view === "month") {
-    if (year == null || month == null) return null;
     const mm = String(month + 1).padStart(2, "0");
     return {
       key: `${year}-${mm}`,
@@ -69,27 +56,13 @@ function bucketOf(o: WonLite, view: View): { key: string; sort: number; label: s
     };
   }
 
-  // week
-  if (o.close_date && /^\d{4}-\d{2}-\d{2}/.test(o.close_date)) {
-    const d = new Date(o.close_date);
-    if (!Number.isNaN(d.getTime())) {
-      const { year: wy, week } = isoWeek(d);
-      return {
-        key: `${wy}-W${String(week).padStart(2, "0")}`,
-        sort: wy * 100 + week,
-        label: `W${week}/${String(wy).slice(2)}`,
-      };
-    }
-  }
-  if (o.week && /^\d{4}-W\d{1,2}$/.test(o.week)) {
-    const [yr, w] = o.week.split("-W");
-    return {
-      key: `${yr}-W${w.padStart(2, "0")}`,
-      sort: +yr * 100 + +w,
-      label: `W${+w}/${yr.slice(2)}`,
-    };
-  }
-  return null;
+  // week — ISO week of the entry date
+  const { year: wy, week } = isoWeek(d);
+  return {
+    key: `${wy}-W${String(week).padStart(2, "0")}`,
+    sort: wy * 100 + week,
+    label: `W${week}/${String(wy).slice(2)}`,
+  };
 }
 
 export function RevenueDashboard({ won }: { won: WonLite[] }) {

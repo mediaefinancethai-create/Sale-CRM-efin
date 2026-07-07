@@ -96,11 +96,8 @@ export default async function DashboardPage() {
       <RevenueDashboard
         won={won.map((o) => ({
           amount: Number(o.amount || 0),
-          close_date: o.close_date,
-          month: o.month,
-          week: o.week,
+          created_at: o.created_at,
           product: o.product,
-          account_name: o.account_name,
         }))}
       />
 
