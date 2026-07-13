@@ -1,6 +1,6 @@
 import type { Source, Stage, Subset } from "@/lib/constants";
 
-export type Role = "admin" | "staff";
+export type Role = "admin" | "manager" | "staff";
 
 export interface Profile {
   id: string;
@@ -124,6 +124,16 @@ export interface IdeaPackage {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface OpportunityRemark {
+  id: string;
+  opportunity_id: string;
+  remark: string;
+  remark_date: string;
+  author_name: string | null;
+  created_by: string | null;
+  created_at: string;
 }
 
 export interface Attachment {

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { Profile, Role } from "@/lib/types";
+import { ROLE_OPTIONS, roleLabel } from "@/lib/roles";
 import { Card } from "@/components/ui";
 import {
   createUserWithPassword,
@@ -149,8 +150,11 @@ export function UsersView({
               onChange={(e) => setRole(e.target.value as Role)}
               className={input}
             >
-              <option value="staff">staff</option>
-              <option value="admin">admin</option>
+              {ROLE_OPTIONS.map((r) => (
+                <option key={r} value={r}>
+                  {roleLabel(r)}
+                </option>
+              ))}
             </select>
           </div>
           {mode === "password" && (
@@ -220,10 +224,12 @@ export function UsersView({
                       className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
                         u.role === "admin"
                           ? "bg-brand/15 text-navy"
-                          : "bg-soft text-muted"
+                          : u.role === "manager"
+                            ? "bg-soft text-navy"
+                            : "bg-line/40 text-muted"
                       }`}
                     >
-                      {u.role}
+                      {roleLabel(u.role)}
                     </span>
                   </td>
                   <td className="py-2">
@@ -240,8 +246,11 @@ export function UsersView({
                         disabled={isPending}
                         className="rounded-lg border border-line px-2 py-1 text-xs"
                       >
-                        <option value="staff">staff</option>
-                        <option value="admin">admin</option>
+                        {ROLE_OPTIONS.map((r) => (
+                          <option key={r} value={r}>
+                            {roleLabel(r)}
+                          </option>
+                        ))}
                       </select>
                     )}
                   </td>

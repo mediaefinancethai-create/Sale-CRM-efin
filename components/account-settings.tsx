@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
+import { roleLabel } from "@/lib/roles";
 import { Card } from "@/components/ui";
 
 // Self-service account page — every logged-in user changes ONLY their own
@@ -66,7 +67,7 @@ export function AccountSettings({ profile }: { profile: Profile }) {
               <dt className="text-muted">สิทธิ์ (role)</dt>
               <dd>
                 <span className="rounded-full bg-soft px-2 py-0.5 text-[11px] font-medium text-navy">
-                  {profile.role}
+                  {roleLabel(profile.role)}
                 </span>
               </dd>
             </div>

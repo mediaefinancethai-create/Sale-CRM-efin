@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { createClient } from "@/lib/supabase/client";
+import type { OpportunityRemark } from "@/lib/types";
 import {
   FORECASTS,
   KANBAN_LANES,
@@ -57,6 +59,7 @@ export function OpportunitiesView({
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [editing, setEditing] = useState<Opportunity | null>(null);
   const [adding, setAdding] = useState(false);
+  const [remarkOpp, setRemarkOpp] = useState<Opportunity | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const months = useMemo(
@@ -315,22 +318,31 @@ export function OpportunitiesView({
                       {o.next_action || "—"}
                     </td>
                     <td className="py-2 text-right">
-                      {editable && (
-                        <span className="inline-flex gap-1">
-                          <button
-                            onClick={() => setEditing(o)}
-                            className="rounded border border-line px-2 py-0.5 text-[11px] hover:border-brand"
-                          >
-                            แก้ไข
-                          </button>
-                          <button
-                            onClick={() => onDelete(o)}
-                            className="rounded border border-line px-2 py-0.5 text-[11px] text-red-600 hover:border-red-400"
-                          >
-                            ลบ
-                          </button>
-                        </span>
-                      )}
+                      <span className="inline-flex gap-1">
+                        <button
+                          onClick={() => setRemarkOpp(o)}
+                          className="rounded border border-line px-2 py-0.5 text-[11px] hover:border-brand"
+                          title="บันทึกการติดตามงาน"
+                        >
+                          ติดตามงาน
+                        </button>
+                        {editable && (
+                          <>
+                            <button
+                              onClick={() => setEditing(o)}
+                              className="rounded border border-line px-2 py-0.5 text-[11px] hover:border-brand"
+                            >
+                              แก้ไข
+                            </button>
+                            <button
+                              onClick={() => onDelete(o)}
+                              className="rounded border border-line px-2 py-0.5 text-[11px] text-red-600 hover:border-red-400"
+                            >
+                              ลบ
+                            </button>
+                          </>
+                        )}
+                      </span>
                     </td>
                   </tr>
                 );
@@ -350,6 +362,177 @@ export function OpportunitiesView({
           }}
         />
       )}
+
+      {remarkOpp && (
+        <RemarkModal
+          opp={remarkOpp}
+          profile={profile}
+          onClose={() => setRemarkOpp(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------- Remark / follow-up timeline per deal ----------
+
+function RemarkModal({
+  opp,
+  profile,
+  onClose,
+}: {
+  opp: Opportunity;
+  profile: Profile;
+  onClose: () => void;
+}) {
+  const today = new Date().toLocaleDateString("en-CA");
+  const [remarks, setRemarks] = useState<OpportunityRemark[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [text, setText] = useState("");
+  const [date, setDate] = useState(today);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function load() {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("opportunity_remarks")
+      .select("*")
+      .eq("opportunity_id", opp.id)
+      .order("remark_date", { ascending: false })
+      .order("created_at", { ascending: false });
+    setRemarks((data ?? []) as OpportunityRemark[]);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opp.id]);
+
+  async function add(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!text.trim()) return;
+    setSaving(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("opportunity_remarks").insert({
+      opportunity_id: opp.id,
+      remark: text.trim(),
+      remark_date: date,
+      author_name: profile.full_name || profile.email,
+      created_by: profile.id,
+    });
+    if (error) {
+      setError(error.message);
+      setSaving(false);
+      return;
+    }
+    setText("");
+    setDate(today);
+    await load();
+    setSaving(false);
+  }
+
+  async function del(id: string) {
+    if (!confirm("ลบบันทึกนี้?")) return;
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("opportunity_remarks")
+      .delete()
+      .eq("id", id);
+    if (error) {
+      alert(`ลบไม่สำเร็จ: ${error.message}`);
+      return;
+    }
+    await load();
+  }
+
+  const input =
+    "w-full rounded-lg border border-line px-2.5 py-1.5 text-sm outline-none focus:border-brand";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl bg-surface p-6 shadow-xl">
+        <h2 className="text-base font-bold text-navy">ติดตามงาน (Remark)</h2>
+        <p className="mb-4 text-xs text-muted">
+          {opp.account_name}
+          {opp.product ? ` · ${opp.product}` : ""} · stage {opp.stage}
+        </p>
+
+        <form onSubmit={add} className="mb-4 space-y-2 rounded-xl bg-bg p-3">
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-40 rounded-lg border border-line px-2.5 py-1.5 text-sm"
+            />
+          </div>
+          <textarea
+            rows={2}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            className={input}
+            placeholder="เช่น วันนี้คุยลูกค้าใหม่ อยากได้สื่อประชาสัมพันธ์ ยังไม่เสนอแพ็กเกจ — นัดตามต่อสัปดาห์หน้า"
+          />
+          {error && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+              {error}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-lg bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50"
+          >
+            {saving ? "กำลังบันทึก..." : "+ เพิ่มบันทึก"}
+          </button>
+        </form>
+
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {loading ? (
+            <p className="text-sm text-muted">กำลังโหลด...</p>
+          ) : remarks.length === 0 ? (
+            <p className="text-sm text-muted">
+              ยังไม่มีบันทึกติดตามงาน — เริ่มบันทึกความคืบหน้าได้เลย
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {remarks.map((r) => (
+                <li
+                  key={r.id}
+                  className="rounded-xl border border-line/70 bg-bg p-3 text-sm"
+                >
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-navy">
+                      {r.remark_date} · {r.author_name || "—"}
+                    </span>
+                    {r.created_by === profile.id || profile.role === "admin" ? (
+                      <button
+                        onClick={() => del(r.id)}
+                        className="text-[11px] text-red-500 hover:underline"
+                      >
+                        ลบ
+                      </button>
+                    ) : null}
+                  </div>
+                  <p className="whitespace-pre-wrap">{r.remark}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-line px-4 py-2 text-sm hover:bg-bg"
+          >
+            ปิด
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

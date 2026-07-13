@@ -4,7 +4,7 @@
 -- =============================================================
 
 -- ---------- Enums ----------
-create type public.role_enum as enum ('admin', 'staff');
+create type public.role_enum as enum ('admin', 'manager', 'staff');
 create type public.source_enum as enum ('Event', 'Media');
 -- 'media' included because 4 of 11 real packages and REVENUE_PLAN use it
 create type public.subset_enum as enum ('better trade', 'efinancethai', 'crypto', 'esg', 'media');
