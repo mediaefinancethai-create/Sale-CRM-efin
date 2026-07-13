@@ -91,12 +91,19 @@ export async function setUserRole(userId: string, role: Role) {
     return { error: "ไม่สามารถเปลี่ยน role ของตัวเองได้" };
 
   const admin = createAdminClient();
-  const { error } = await admin
+  const { data, error } = await admin
     .from("profiles")
     .update({ role })
-    .eq("id", userId);
+    .eq("id", userId)
+    .select("id");
+  if (error) return { error: error.message };
+  if (!data || data.length === 0)
+    return {
+      error:
+        "อัปเดตไม่สำเร็จ (ไม่มีแถวถูกแก้) — ตรวจสอบว่า SUPABASE_SERVICE_ROLE_KEY ถูกต้อง",
+    };
   revalidatePath("/admin/users");
-  return { error: error?.message ?? null };
+  return { error: null };
 }
 
 // Permanently delete a user (any role). Admin-only; cascades to their profile.
@@ -114,16 +121,23 @@ export async function deleteUser(userId: string) {
 export async function setUserName(userId: string, fullName: string) {
   await requireAdmin();
   const admin = createAdminClient();
-  const { error } = await admin
+  const { data, error } = await admin
     .from("profiles")
     .update({ full_name: fullName })
-    .eq("id", userId);
+    .eq("id", userId)
+    .select("id");
+  if (error) return { error: error.message };
+  if (!data || data.length === 0)
+    return {
+      error:
+        "อัปเดตไม่สำเร็จ (ไม่มีแถวถูกแก้) — ตรวจสอบว่า SUPABASE_SERVICE_ROLE_KEY ถูกต้อง",
+    };
   // keep auth metadata in sync (best-effort)
   await admin.auth.admin.updateUserById(userId, {
     user_metadata: { full_name: fullName },
   });
   revalidatePath("/admin/users");
-  return { error: error?.message ?? null };
+  return { error: null };
 }
 
 // Set/reset a user's password. Admin-only; runs with service role on the server.
