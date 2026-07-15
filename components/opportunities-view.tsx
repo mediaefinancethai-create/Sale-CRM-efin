@@ -237,7 +237,7 @@ export function OpportunitiesView({
                     {cards.length} · ฿{baht(laneValue)}
                   </span>
                 </div>
-                <div className="space-y-2">
+                <div className="max-h-[420px] space-y-2 overflow-y-auto pr-1">
                   {cards.map((o) => (
                     <div
                       key={o.id}
