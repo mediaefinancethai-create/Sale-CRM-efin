@@ -220,7 +220,7 @@ export function OpportunitiesView({
 
       {/* Kanban */}
       <Card title="Kanban" pill={isPending ? "กำลังบันทึก..." : "ลากการ์ดเพื่อเปลี่ยน stage"}>
-        <div className="grid gap-3 overflow-x-auto md:grid-cols-5">
+        <div className="grid gap-3 overflow-x-auto md:grid-cols-6">
           {KANBAN_LANES.map((lane) => {
             const cards = filtered.filter((o) => o.stage === lane);
             const laneValue = cards.reduce((s, o) => s + Number(o.amount || 0), 0);

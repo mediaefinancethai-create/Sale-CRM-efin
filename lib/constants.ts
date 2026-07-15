@@ -12,8 +12,9 @@ export const STAGES = [
 ] as const;
 export type Stage = (typeof STAGES)[number];
 
-// Kanban lanes (subset of stages, per prototype)
+// Kanban lanes (subset of stages)
 export const KANBAN_LANES: Stage[] = [
+  "Prospecting",
   "Qualified",
   "Proposal",
   "Negotiation",
