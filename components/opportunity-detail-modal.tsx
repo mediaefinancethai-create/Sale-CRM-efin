@@ -2,8 +2,18 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { baht } from "@/lib/constants";
+import {
+  FORECASTS,
+  OWNERS,
+  SEGMENTS,
+  SOURCES,
+  STAGES,
+  SUBSETS,
+  SUBSET_TO_SOURCE,
+  baht,
+} from "@/lib/constants";
 import { roleLabel } from "@/lib/roles";
 import type {
   Attachment,
@@ -39,11 +49,80 @@ export function OpportunityDetailModal({
   onClose: () => void;
 }) {
   const supabase = useRef(createClient()).current;
+  const router = useRouter();
   const today = new Date().toLocaleDateString("en-CA");
 
   const [notes, setNotes] = useState(opp.notes ?? "");
   const [savingNotes, setSavingNotes] = useState(false);
   const [notesSaved, setNotesSaved] = useState(false);
+
+  // editable deal fields
+  const [form, setForm] = useState({
+    product: opp.product ?? "",
+    owner: opp.owner ?? "",
+    segment: opp.segment ?? "",
+    source: opp.source ?? "Media",
+    subset: opp.subset ?? "efinancethai",
+    stage: opp.stage,
+    forecast: opp.forecast ?? "Pipeline",
+    amount: Number(opp.amount ?? 0),
+    probability: opp.probability ?? null,
+    month: opp.month ?? "",
+    close_date: opp.close_date ?? "",
+    next_action_date: opp.next_action_date ?? "",
+    next_action: opp.next_action ?? "",
+    qt_no: opp.qt_no ?? "",
+    so_no: opp.so_no ?? "",
+    invoice_status: opp.invoice_status ?? "",
+    invoice_no: opp.invoice_no ?? "",
+    invoice_date: opp.invoice_date ?? "",
+    payment_status: opp.payment_status ?? "",
+    paid_date: opp.paid_date ?? "",
+  });
+  const [savingDeal, setSavingDeal] = useState(false);
+  const [dealSaved, setDealSaved] = useState(false);
+  function patch(p: Partial<typeof form>) {
+    setForm((f) => ({ ...f, ...p }));
+  }
+
+  async function saveDeal() {
+    setSavingDeal(true);
+    setDealSaved(false);
+    setErr(null);
+    const { error } = await supabase
+      .from("opportunities")
+      .update({
+        product: form.product,
+        owner: form.owner || null,
+        segment: form.segment || null,
+        source: form.source || null,
+        subset: form.subset || null,
+        stage: form.stage,
+        forecast: form.forecast || null,
+        amount: Number(form.amount) || 0,
+        probability: form.probability,
+        month: form.month || null,
+        close_date: form.close_date || null,
+        next_action_date: form.next_action_date || null,
+        next_action: form.next_action || null,
+        qt_no: form.qt_no || null,
+        so_no: form.so_no || null,
+        invoice_status: form.invoice_status || null,
+        invoice_no: form.invoice_no || null,
+        invoice_date: form.invoice_date || null,
+        payment_status: form.payment_status || null,
+        paid_date: form.paid_date || null,
+      })
+      .eq("id", opp.id);
+    setSavingDeal(false);
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+    setDealSaved(true);
+    setTimeout(() => setDealSaved(false), 2000);
+    router.refresh(); // update Kanban / table / account views in the background
+  }
 
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [allProfiles, setAllProfiles] = useState<MiniProfile[]>([]);
@@ -205,6 +284,8 @@ export function OpportunityDetailModal({
   );
 
   const label = "mb-1 block text-xs font-semibold text-muted";
+  const fieldCls =
+    "w-full rounded-lg border border-line px-2 py-1.5 text-sm outline-none focus:border-brand";
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
@@ -224,10 +305,10 @@ export function OpportunityDetailModal({
               <h2 className="text-lg font-bold text-navy">{opp.account_name}</h2>
             )}
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
-              <StagePill stage={opp.stage} />
-              {opp.product && <span>{opp.product}</span>}
-              <span>· ฿{baht(opp.amount)}</span>
-              {opp.owner && <span>· owner: {opp.owner}</span>}
+              <StagePill stage={form.stage} />
+              {form.product && <span>{form.product}</span>}
+              <span>· ฿{baht(form.amount)}</span>
+              {form.owner && <span>· owner: {form.owner}</span>}
             </div>
           </div>
           <button
@@ -305,6 +386,198 @@ export function OpportunityDetailModal({
                     </div>
                   )}
                 </div>
+              </div>
+            </section>
+
+            {/* Editable deal fields */}
+            <section>
+              <label className={label}>รายละเอียดดีล (แก้ไขได้)</label>
+              <div className="grid grid-cols-2 gap-2.5 rounded-xl bg-bg p-3">
+                <div className="col-span-2">
+                  <span className="mb-1 block text-[11px] text-muted">Product / แพ็ก</span>
+                  <input
+                    value={form.product}
+                    onChange={(e) => patch({ product: e.target.value })}
+                    className={fieldCls}
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-[11px] text-muted">มูลค่า (บาท)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.amount}
+                    onChange={(e) => patch({ amount: Number(e.target.value) })}
+                    className={fieldCls}
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-[11px] text-muted">Probability (%)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={form.probability ?? ""}
+                    onChange={(e) =>
+                      patch({
+                        probability:
+                          e.target.value === "" ? null : Number(e.target.value),
+                      })
+                    }
+                    className={fieldCls}
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-[11px] text-muted">Stage</span>
+                  <select
+                    value={form.stage}
+                    onChange={(e) => patch({ stage: e.target.value as typeof form.stage })}
+                    className={fieldCls}
+                  >
+                    {STAGES.map((s) => (
+                      <option key={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <span className="mb-1 block text-[11px] text-muted">Forecast</span>
+                  <select
+                    value={form.forecast}
+                    onChange={(e) => patch({ forecast: e.target.value })}
+                    className={fieldCls}
+                  >
+                    {FORECASTS.map((f) => (
+                      <option key={f}>{f}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <span className="mb-1 block text-[11px] text-muted">Subset</span>
+                  <select
+                    value={form.subset}
+                    onChange={(e) =>
+                      patch({
+                        subset: e.target.value as typeof form.subset,
+                        source: (SUBSET_TO_SOURCE[e.target.value] ??
+                          form.source) as typeof form.source,
+                      })
+                    }
+                    className={fieldCls}
+                  >
+                    {SUBSETS.map((s) => (
+                      <option key={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <span className="mb-1 block text-[11px] text-muted">Source</span>
+                  <select
+                    value={form.source}
+                    onChange={(e) => patch({ source: e.target.value as typeof form.source })}
+                    className={fieldCls}
+                  >
+                    {SOURCES.map((s) => (
+                      <option key={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <span className="mb-1 block text-[11px] text-muted">Owner (AE)</span>
+                  <select
+                    value={form.owner}
+                    onChange={(e) => patch({ owner: e.target.value })}
+                    className={fieldCls}
+                  >
+                    <option value="">—</option>
+                    {OWNERS.map((o) => (
+                      <option key={o}>{o}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <span className="mb-1 block text-[11px] text-muted">Segment</span>
+                  <select
+                    value={form.segment}
+                    onChange={(e) => patch({ segment: e.target.value })}
+                    className={fieldCls}
+                  >
+                    <option value="">—</option>
+                    {SEGMENTS.map((s) => (
+                      <option key={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <span className="mb-1 block text-[11px] text-muted">Close date</span>
+                  <input
+                    type="date"
+                    value={form.close_date}
+                    onChange={(e) => patch({ close_date: e.target.value })}
+                    className={fieldCls}
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-[11px] text-muted">Next action date</span>
+                  <input
+                    type="date"
+                    value={form.next_action_date}
+                    onChange={(e) => patch({ next_action_date: e.target.value })}
+                    className={fieldCls}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <span className="mb-1 block text-[11px] text-muted">Next action</span>
+                  <input
+                    value={form.next_action}
+                    onChange={(e) => patch({ next_action: e.target.value })}
+                    className={fieldCls}
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-[11px] text-muted">QT No.</span>
+                  <input
+                    value={form.qt_no}
+                    onChange={(e) => patch({ qt_no: e.target.value })}
+                    className={fieldCls}
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-[11px] text-muted">SO No.</span>
+                  <input
+                    value={form.so_no}
+                    onChange={(e) => patch({ so_no: e.target.value })}
+                    className={fieldCls}
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-[11px] text-muted">สถานะวางบิล</span>
+                  <input
+                    value={form.invoice_status}
+                    onChange={(e) => patch({ invoice_status: e.target.value })}
+                    className={fieldCls}
+                    placeholder="เช่น Invoiced / Not Invoiced"
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-[11px] text-muted">สถานะชำระเงิน</span>
+                  <input
+                    value={form.payment_status}
+                    onChange={(e) => patch({ payment_status: e.target.value })}
+                    className={fieldCls}
+                    placeholder="เช่น Paid / Waiting Payment"
+                  />
+                </div>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  onClick={saveDeal}
+                  disabled={savingDeal}
+                  className="rounded-lg bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                >
+                  {savingDeal ? "กำลังบันทึก..." : "บันทึกรายละเอียดดีล"}
+                </button>
+                {dealSaved && <span className="text-xs text-brand">บันทึกแล้ว ✓</span>}
               </div>
             </section>
 
