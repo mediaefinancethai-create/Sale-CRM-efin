@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/auth";
-import { baht } from "@/lib/constants";
 import type {
   Account,
   AccountContact,
@@ -10,9 +9,9 @@ import type {
   Attachment,
   Opportunity,
 } from "@/lib/types";
-import { Card } from "@/components/ui";
 import { ContactsSection, NotesSection } from "@/components/account-detail";
 import { AttachmentsSection } from "@/components/attachments-section";
+import { AccountDeals } from "@/components/account-deals";
 
 export default async function AccountDetailPage({
   params,
@@ -29,7 +28,7 @@ export default async function AccountDetailPage({
     .maybeSingle();
   if (!account) notFound();
 
-  const [{ data: contacts }, { data: notes }, { data: wonOpps }, { data: files }] =
+  const [{ data: contacts }, { data: notes }, { data: deals }, { data: files }] =
     await Promise.all([
       supabase
         .from("account_contacts")
@@ -43,12 +42,12 @@ export default async function AccountDetailPage({
         .eq("account_id", params.id)
         .order("note_date", { ascending: false })
         .order("created_at", { ascending: false }),
+      // ALL deals of this account (many orders / bills / quotations), not just Closed Won
       supabase
         .from("opportunities")
         .select("*")
         .eq("account_id", params.id)
-        .eq("stage", "Closed Won")
-        .order("close_date", { ascending: false }),
+        .order("deal_no", { ascending: true }),
       supabase
         .from("attachments")
         .select("*")
@@ -57,7 +56,6 @@ export default async function AccountDetailPage({
     ]);
 
   const acc = account as Account;
-  const history = (wonOpps ?? []) as Opportunity[];
 
   return (
     <div className="space-y-5">
@@ -80,47 +78,7 @@ export default async function AccountDetailPage({
         contacts={(contacts ?? []) as AccountContact[]}
       />
 
-      <Card
-        title="Product & Service History"
-        pill={`${history.length} รายการ (Closed Won)`}
-      >
-        {history.length === 0 ? (
-          <p className="text-sm text-muted">ยังไม่มีประวัติการซื้อ</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-sm">
-              <thead>
-                <tr className="border-b border-line text-left text-xs text-muted">
-                  <th className="pb-2 pr-2">วันปิด</th>
-                  <th className="pb-2 pr-2">สินค้า</th>
-                  <th className="pb-2 pr-2">Source/Subset</th>
-                  <th className="pb-2 pr-2 text-right">มูลค่า</th>
-                  <th className="pb-2">สถานะบิล</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((o) => (
-                  <tr key={o.id} className="border-b border-line/60">
-                    <td className="py-2 pr-2 whitespace-nowrap">
-                      {o.close_date || "—"}
-                    </td>
-                    <td className="py-2 pr-2">{o.product}</td>
-                    <td className="py-2 pr-2 text-xs text-muted">
-                      {o.source} / {o.subset}
-                    </td>
-                    <td className="py-2 pr-2 text-right font-medium">
-                      ฿{baht(o.amount)}
-                    </td>
-                    <td className="py-2 text-xs text-muted">
-                      {o.invoice_status || o.next_action || "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+      <AccountDeals profile={profile} deals={(deals ?? []) as Opportunity[]} />
 
       <AttachmentsSection
         accountId={acc.id}
