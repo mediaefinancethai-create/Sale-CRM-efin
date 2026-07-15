@@ -19,6 +19,7 @@ import {
 import { canModify } from "@/lib/rbac";
 import type { Account, Opportunity, Profile } from "@/lib/types";
 import { Card, StagePill } from "@/components/ui";
+import { OpportunityDetailModal } from "@/components/opportunity-detail-modal";
 import {
   createOpportunity,
   deleteOpportunity,
@@ -60,6 +61,7 @@ export function OpportunitiesView({
   const [editing, setEditing] = useState<Opportunity | null>(null);
   const [adding, setAdding] = useState(false);
   const [remarkOpp, setRemarkOpp] = useState<Opportunity | null>(null);
+  const [detailOpp, setDetailOpp] = useState<Opportunity | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const months = useMemo(
@@ -245,9 +247,13 @@ export function OpportunitiesView({
                       }
                       className="cursor-grab rounded-lg border border-line bg-surface p-2.5 text-xs shadow-sm active:cursor-grabbing"
                     >
-                      <div className="mb-1 line-clamp-2 font-semibold">
+                      <button
+                        onClick={() => setDetailOpp(o)}
+                        className="mb-1 line-clamp-2 text-left font-semibold text-navy hover:text-brand hover:underline"
+                        title="เปิดรายละเอียดดีล"
+                      >
                         {o.account_name}
-                      </div>
+                      </button>
                       <div className="text-muted">{o.product}</div>
                       <div className="mt-1 flex items-center justify-between">
                         <span className="font-bold text-navy">
@@ -368,6 +374,14 @@ export function OpportunitiesView({
           opp={remarkOpp}
           profile={profile}
           onClose={() => setRemarkOpp(null)}
+        />
+      )}
+
+      {detailOpp && (
+        <OpportunityDetailModal
+          opp={detailOpp}
+          profile={profile}
+          onClose={() => setDetailOpp(null)}
         />
       )}
     </div>
