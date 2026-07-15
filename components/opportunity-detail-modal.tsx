@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { baht } from "@/lib/constants";
@@ -211,7 +212,17 @@ export function OpportunityDetailModal({
         {/* header */}
         <div className="flex items-start justify-between gap-3 border-b border-line p-5">
           <div className="min-w-0">
-            <h2 className="text-lg font-bold text-navy">{opp.account_name}</h2>
+            {opp.account_id ? (
+              <Link
+                href={`/accounts/${opp.account_id}`}
+                className="text-lg font-bold text-navy hover:text-brand hover:underline"
+                title="ดูข้อมูลบริษัทนี้ทั้งหมด"
+              >
+                {opp.account_name}
+              </Link>
+            ) : (
+              <h2 className="text-lg font-bold text-navy">{opp.account_name}</h2>
+            )}
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
               <StagePill stage={opp.stage} />
               {opp.product && <span>{opp.product}</span>}
