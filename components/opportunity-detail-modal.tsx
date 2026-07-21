@@ -22,6 +22,7 @@ import type {
   Profile,
 } from "@/lib/types";
 import { StagePill } from "@/components/ui";
+import { deleteOpportunity } from "@/app/(app)/opportunities/actions";
 
 const BUCKET = "attachments";
 
@@ -81,6 +82,25 @@ export function OpportunityDetailModal({
   });
   const [savingDeal, setSavingDeal] = useState(false);
   const [dealSaved, setDealSaved] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function removeDeal() {
+    if (
+      !confirm(
+        `ลบดีล "${opp.account_name}" (฿${baht(form.amount)}) ออกถาวร?\nรวมถึงบันทึกติดตามงานและผู้เกี่ยวข้องของดีลนี้`
+      )
+    )
+      return;
+    setDeleting(true);
+    const res = await deleteOpportunity(opp.id);
+    if (res.error) {
+      setErr(`ลบไม่สำเร็จ: ${res.error}`);
+      setDeleting(false);
+      return;
+    }
+    onClose();
+    router.refresh();
+  }
   function patch(p: Partial<typeof form>) {
     setForm((f) => ({ ...f, ...p }));
   }
@@ -311,12 +331,21 @@ export function OpportunityDetailModal({
               {form.owner && <span>· owner: {form.owner}</span>}
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg border border-line px-3 py-1 text-sm hover:bg-bg"
-          >
-            ปิด
-          </button>
+          <div className="flex shrink-0 gap-2">
+            <button
+              onClick={removeDeal}
+              disabled={deleting}
+              className="rounded-lg border border-red-300 px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+            >
+              {deleting ? "กำลังลบ..." : "ลบดีล"}
+            </button>
+            <button
+              onClick={onClose}
+              className="rounded-lg border border-line px-3 py-1 text-sm hover:bg-bg"
+            >
+              ปิด
+            </button>
+          </div>
         </div>
 
         <div className="grid gap-5 p-5 lg:grid-cols-3">
