@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireProfile } from "@/lib/auth";
 import type {
   Account,
@@ -28,6 +29,11 @@ export default async function AccountDetailPage({
     .maybeSingle();
   if (!account) notFound();
 
+  // deals fetched with service role so EVERY role sees all of this account's
+  // deals equally on the Account page (the Opportunities module still scopes
+  // Staff to their own deals via RLS).
+  const admin = createAdminClient();
+
   const [{ data: contacts }, { data: notes }, { data: deals }, { data: files }] =
     await Promise.all([
       supabase
@@ -42,8 +48,8 @@ export default async function AccountDetailPage({
         .eq("account_id", params.id)
         .order("note_date", { ascending: false })
         .order("created_at", { ascending: false }),
-      // ALL deals of this account (many orders / bills / quotations), not just Closed Won
-      supabase
+      // ALL deals of this account (many orders / bills / quotations), all roles equal
+      admin
         .from("opportunities")
         .select("*")
         .eq("account_id", params.id)
