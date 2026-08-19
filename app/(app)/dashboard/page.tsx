@@ -37,6 +37,8 @@ export default async function DashboardPage() {
     { label: "efinancethai (media)", actual: wonBySubset["efinancethai"] ?? 0, target: REVENUE_PLAN.subset["media"] },
     { label: "crypto", actual: wonBySubset["crypto"] ?? 0, target: REVENUE_PLAN.subset["crypto"] },
     { label: "esg", actual: wonBySubset["esg"] ?? 0, target: REVENUE_PLAN.subset["esg"] },
+    { label: "efin Let Profit Run", actual: wonBySubset["efin Let Profit Run"] ?? 0, target: REVENUE_PLAN.subset["efin Let Profit Run"] },
+    { label: "Capital Drive Golf 2026", actual: wonBySubset["Capital Drive Golf 2026"] ?? 0, target: REVENUE_PLAN.subset["Capital Drive Golf 2026"] },
   ];
 
   // urgent: open deals with a next action due today or overdue

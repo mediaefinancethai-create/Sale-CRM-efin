@@ -71,6 +71,8 @@ export const REVENUE_PLAN = {
     media: 5_000_000,
     crypto: 3_000_000,
     esg: 1_500_000,
+    "efin Let Profit Run": 2_000_000,
+    "Capital Drive Golf 2026": 1_000_000,
   } as Record<string, number>, // THB targets this year
 };
 
