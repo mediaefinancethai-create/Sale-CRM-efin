@@ -10,7 +10,7 @@
 create type public.role_enum as enum ('admin', 'manager', 'staff');
 create type public.source_enum as enum ('Event', 'Media');
 -- 'media' included because 4 of 11 real packages and REVENUE_PLAN use it
-create type public.subset_enum as enum ('better trade', 'efinancethai', 'crypto', 'esg', 'media');
+create type public.subset_enum as enum ('better trade', 'efinancethai', 'crypto', 'esg', 'media', 'efin Let Profit Run', 'Capital Drive Golf 2026');
 create type public.stage_enum as enum (
   'Prospecting', 'Qualified', 'Needs Analysis', 'Proposal',
   'Negotiation', 'Verbal Win', 'Closed Won', 'Closed Lost'
@@ -538,6 +538,15 @@ create policy "opp_members_insert" on public.opportunity_members
   for insert with check (auth.uid() is not null and created_by = auth.uid());
 create policy "opp_members_delete" on public.opportunity_members
   for delete using (auth.uid() is not null);
+
+
+-- =============================================================
+-- Add two Event subsets (revenue lines):
+--   'efin Let Profit Run', 'Capital Drive Golf 2026'  (source = Event)
+-- Adding enum values only (not used as literals here) — safe to run as-is.
+-- =============================================================
+alter type public.subset_enum add value if not exists 'efin Let Profit Run';
+alter type public.subset_enum add value if not exists 'Capital Drive Golf 2026';
 
 
 -- =============================================================

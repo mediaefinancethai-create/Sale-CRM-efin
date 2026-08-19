@@ -32,16 +32,20 @@ export const SUBSETS = [
   "crypto",
   "esg",
   "media",
+  "efin Let Profit Run",
+  "Capital Drive Golf 2026",
 ] as const;
 export type Subset = (typeof SUBSETS)[number];
 
-// mapping: better trade & esg → Event; efinancethai & crypto → Media
+// mapping: better trade & esg & events → Event; efinancethai & crypto → Media
 export const SUBSET_TO_SOURCE: Record<string, Source> = {
   "better trade": "Event",
   esg: "Event",
   efinancethai: "Media",
   crypto: "Media",
   media: "Media",
+  "efin Let Profit Run": "Event",
+  "Capital Drive Golf 2026": "Event",
 };
 
 // AE roster from prototype — record-level owner labels (not login roles)
