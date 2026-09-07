@@ -7,7 +7,6 @@ import type { OpportunityRemark } from "@/lib/types";
 import {
   FORECASTS,
   KANBAN_LANES,
-  OWNERS,
   SEGMENTS,
   SOURCES,
   STAGES,
@@ -29,6 +28,12 @@ import {
 } from "@/app/(app)/opportunities/actions";
 
 type AccountLite = Pick<Account, "id" | "name" | "legacy_id" | "segment">;
+type UserLite = Pick<Profile, "id" | "full_name" | "email" | "role">;
+
+// display label for an owner option
+function ownerLabel(u: UserLite): string {
+  return u.full_name?.trim() || u.email || "—";
+}
 
 interface Filters {
   month: string;
@@ -52,10 +57,12 @@ export function OpportunitiesView({
   profile,
   opportunities,
   accounts,
+  users,
 }: {
   profile: Profile;
   opportunities: Opportunity[];
   accounts: AccountLite[];
+  users: UserLite[];
 }) {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [editing, setEditing] = useState<Opportunity | null>(null);
@@ -68,6 +75,13 @@ export function OpportunitiesView({
     () => [...new Set(opportunities.map((o) => o.month).filter(Boolean))] as string[],
     [opportunities]
   );
+  // owner filter options: every distinct owner present in the data + all users
+  const ownerOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const o of opportunities) if (o.owner) set.add(o.owner);
+    for (const u of users) set.add(ownerLabel(u));
+    return [...set].sort();
+  }, [opportunities, users]);
 
   // all filters except stage — used for chip counts (per prototype oppsForStageChips)
   const preStage = useMemo(() => {
@@ -159,7 +173,7 @@ export function OpportunitiesView({
           className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-sm"
         >
           <option value="">ทุก owner</option>
-          {OWNERS.map((o) => (
+          {ownerOptions.map((o) => (
             <option key={o}>{o}</option>
           ))}
         </select>
@@ -361,6 +375,7 @@ export function OpportunitiesView({
       {(adding || editing) && (
         <OppFormModal
           accounts={accounts}
+          users={users}
           initial={editing}
           onClose={() => {
             setAdding(false);
@@ -555,10 +570,12 @@ function RemarkModal({
 
 function OppFormModal({
   accounts,
+  users,
   initial,
   onClose,
 }: {
   accounts: AccountLite[];
+  users: UserLite[];
   initial: Opportunity | null;
   onClose: () => void;
 }) {
@@ -644,8 +661,15 @@ function OppFormModal({
               className={input}
             >
               <option value="">—</option>
-              {OWNERS.map((o) => (
-                <option key={o}>{o}</option>
+              {/* keep the current value even if it is a legacy AE code not in users */}
+              {form.owner &&
+                !users.some((u) => ownerLabel(u) === form.owner) && (
+                  <option value={form.owner}>{form.owner}</option>
+                )}
+              {users.map((u) => (
+                <option key={u.id} value={ownerLabel(u)}>
+                  {ownerLabel(u)}
+                </option>
               ))}
             </select>
           </div>
