@@ -215,16 +215,18 @@ function AccountFormModal({
           </div>
           <div>
             <label className={label}>Segment</label>
-            <select
+            <input
+              list="account-segment-options"
               value={form.segment}
               onChange={(e) => patch({ segment: e.target.value })}
               className={input}
-            >
-              <option value="">—</option>
+              placeholder="เลือกจากลิสต์ หรือพิมพ์ใหม่"
+            />
+            <datalist id="account-segment-options">
               {SEGMENTS.map((s) => (
-                <option key={s}>{s}</option>
+                <option key={s} value={s} />
               ))}
-            </select>
+            </datalist>
           </div>
           <div>
             <label className={label}>Tier</label>
@@ -237,27 +239,32 @@ function AccountFormModal({
           </div>
           <div>
             <label className={label}>Owner (AE)</label>
-            <select
+            <input
+              list="account-owner-options"
               value={form.owner}
               onChange={(e) => patch({ owner: e.target.value })}
               className={input}
-            >
-              <option value="">—</option>
+              placeholder="เลือกจากลิสต์ หรือพิมพ์ใหม่"
+            />
+            <datalist id="account-owner-options">
               {OWNERS.map((o) => (
-                <option key={o}>{o}</option>
+                <option key={o} value={o} />
               ))}
-            </select>
+            </datalist>
           </div>
           <div>
             <label className={label}>สถานะ</label>
-            <select
+            <input
+              list="account-status-options"
               value={form.status}
               onChange={(e) => patch({ status: e.target.value })}
               className={input}
-            >
-              <option>Active</option>
-              <option>Inactive</option>
-            </select>
+              placeholder="เลือกจากลิสต์ หรือพิมพ์ใหม่"
+            />
+            <datalist id="account-status-options">
+              <option value="Active" />
+              <option value="Inactive" />
+            </datalist>
           </div>
           <div className="col-span-2">
             <label className={label}>Notes</label>
