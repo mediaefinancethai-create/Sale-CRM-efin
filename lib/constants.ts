@@ -87,15 +87,22 @@ export const CLIENT_STATUSES = [
 
 export const RELATIONSHIP_LEVELS = ["High", "Medium", "Low", "None"] as const;
 
+// Shared by Account form + Add/Edit deal form (kept in sync via this one list).
+// Includes the real Thai segments used in the data + common extra options.
 export const SEGMENTS = [
+  "ธนาคาร",
+  "หลักทรัพย์/การเงิน",
+  "ประกันภัย/ชีวิต",
+  "พลังงาน/อุตสาหกรรม",
   "Digital Asset",
-  "Broker",
-  "Asset Management",
   "Listed Company",
   "FinTech",
+  "Broker",
+  "Asset Management",
   "Banking",
   "Insurance",
   "ทั่วไป",
+  "อื่นๆ",
   "Other",
 ];
 
