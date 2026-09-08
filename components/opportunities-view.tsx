@@ -7,6 +7,7 @@ import type { OpportunityRemark } from "@/lib/types";
 import {
   FORECASTS,
   KANBAN_LANES,
+  MONTHS,
   SEGMENTS,
   SOURCES,
   STAGES,
@@ -27,7 +28,10 @@ import {
   type OppInput,
 } from "@/app/(app)/opportunities/actions";
 
-type AccountLite = Pick<Account, "id" | "name" | "legacy_id" | "segment">;
+type AccountLite = Pick<
+  Account,
+  "id" | "name" | "legacy_id" | "segment" | "symbol"
+>;
 type UserLite = Pick<Profile, "id" | "full_name" | "email" | "role">;
 
 // display label for an owner option
@@ -71,10 +75,6 @@ export function OpportunitiesView({
   const [detailOpp, setDetailOpp] = useState<Opportunity | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const months = useMemo(
-    () => [...new Set(opportunities.map((o) => o.month).filter(Boolean))] as string[],
-    [opportunities]
-  );
   // owner filter options: every distinct owner present in the data + all users
   const ownerOptions = useMemo(() => {
     const set = new Set<string>();
@@ -87,7 +87,11 @@ export function OpportunitiesView({
   const preStage = useMemo(() => {
     const q = filters.search.trim().toLowerCase();
     return opportunities.filter((o) => {
-      if (filters.month && o.month !== filters.month) return false;
+      if (
+        filters.month &&
+        !(o.month ?? "").toLowerCase().startsWith(filters.month.toLowerCase())
+      )
+        return false;
       if (filters.owner && o.owner !== filters.owner) return false;
       if (filters.source && o.source !== filters.source) return false;
       if (filters.subset && o.subset !== filters.subset) return false;
@@ -163,7 +167,7 @@ export function OpportunitiesView({
           className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-sm"
         >
           <option value="">ทุกเดือน</option>
-          {months.map((m) => (
+          {MONTHS.map((m) => (
             <option key={m}>{m}</option>
           ))}
         </select>
@@ -566,6 +570,82 @@ function RemarkModal({
   );
 }
 
+// ---------- account combobox (search by name OR symbol, allow new) ----------
+
+function AccountCombobox({
+  accounts,
+  value,
+  onPick,
+}: {
+  accounts: AccountLite[];
+  value: string;
+  onPick: (acc: AccountLite | null, typedName: string) => void;
+}) {
+  const [query, setQuery] = useState(value);
+  const [open, setOpen] = useState(false);
+
+  // keep the field in sync when the parent resets the form
+  useEffect(() => setQuery(value), [value]);
+
+  const q = query.trim().toLowerCase();
+  const matches = useMemo(() => {
+    const list = q
+      ? accounts.filter(
+          (a) =>
+            a.name.toLowerCase().includes(q) ||
+            (a.symbol ?? "").toLowerCase().includes(q)
+        )
+      : accounts;
+    return list.slice(0, 8);
+  }, [accounts, q]);
+
+  const cls =
+    "w-full rounded-lg border border-line px-2.5 py-1.5 text-sm outline-none focus:border-brand";
+
+  return (
+    <div className="relative">
+      <input
+        required
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setOpen(true);
+          onPick(null, e.target.value); // typing = treat as new until a match is picked
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        className={cls}
+        placeholder="พิมพ์ชื่อ หรือ symbol (เช่น CKP) หรือชื่อบริษัทใหม่"
+      />
+      {open && matches.length > 0 && (
+        <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-line bg-surface text-sm shadow-lg">
+          {matches.map((a) => (
+            <li key={a.id}>
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setQuery(a.name);
+                  onPick(a, a.name);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left hover:bg-bg"
+              >
+                <span className="min-w-0 truncate">{a.name}</span>
+                {a.symbol && (
+                  <span className="shrink-0 rounded bg-soft px-1.5 py-0.5 text-[10px] font-medium text-navy">
+                    {a.symbol}
+                  </span>
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 // ---------- add/edit modal ----------
 
 function OppFormModal({
@@ -632,26 +712,22 @@ function OppFormModal({
         <form onSubmit={submit} className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
             <label className={label}>ลูกค้า (Account)</label>
-            <select
-              required
-              value={form.account_id ?? ""}
-              onChange={(e) => {
-                const acc = accounts.find((a) => a.id === e.target.value);
+            <AccountCombobox
+              accounts={accounts}
+              value={form.account_name}
+              onPick={(acc, typedName) =>
                 patch({
+                  account_name: acc ? acc.name : typedName,
                   account_id: acc?.id ?? null,
-                  account_name: acc?.name ?? "",
                   segment: acc?.segment ?? form.segment,
-                });
-              }}
-              className={input}
-            >
-              <option value="">— เลือกลูกค้า —</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
+                })
+              }
+            />
+            {form.account_name && !form.account_id && (
+              <p className="mt-1 text-[11px] text-brand">
+                + จะสร้างบัญชีใหม่ &quot;{form.account_name}&quot; ให้อัตโนมัติเมื่อบันทึก
+              </p>
+            )}
           </div>
           <div>
             <label className={label}>Owner (AE)</label>
@@ -661,7 +737,6 @@ function OppFormModal({
               className={input}
             >
               <option value="">—</option>
-              {/* keep the current value even if it is a legacy AE code not in users */}
               {form.owner &&
                 !users.some((u) => ownerLabel(u) === form.owner) && (
                   <option value={form.owner}>{form.owner}</option>
@@ -675,56 +750,65 @@ function OppFormModal({
           </div>
           <div>
             <label className={label}>Segment</label>
-            <select
+            <input
+              list="deal-segment-options"
               value={form.segment}
               onChange={(e) => patch({ segment: e.target.value })}
               className={input}
-            >
-              <option value="">—</option>
-              {SEGMENTS.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
-          </div>
-          <div className="col-span-2">
-            <label className={label}>Product</label>
-            <input
-              required
-              value={form.product}
-              onChange={(e) => patch({ product: e.target.value })}
-              className={input}
-              placeholder="เช่น BT-Media, Media Package, IPO Package"
+              placeholder="ตรงกับ Segment ของบริษัท (เลือก/พิมพ์ได้)"
             />
-          </div>
-          <div>
-            <label className={label}>Subset</label>
-            <select
-              value={form.subset}
-              onChange={(e) => {
-                const subset = e.target.value;
-                patch({
-                  subset,
-                  source: SUBSET_TO_SOURCE[subset] ?? form.source,
-                });
-              }}
-              className={input}
-            >
-              {SUBSETS.map((s) => (
-                <option key={s}>{s}</option>
+            <datalist id="deal-segment-options">
+              {SEGMENTS.map((s) => (
+                <option key={s} value={s} />
               ))}
-            </select>
+            </datalist>
           </div>
+          {/* 1) ประเภทงาน (เดิม Source) — เลือกก่อนเป็นอันดับแรก */}
           <div>
-            <label className={label}>Source (ตาม mapping)</label>
+            <label className={label}>1. ประเภทงาน</label>
             <select
               value={form.source}
-              onChange={(e) => patch({ source: e.target.value })}
+              onChange={(e) => {
+                const source = e.target.value;
+                const list: string[] = SUBSETS.filter(
+                  (s) => SUBSET_TO_SOURCE[s] === source
+                );
+                patch({
+                  source,
+                  // ถ้างานเดิมไม่อยู่ในประเภทใหม่ ให้เด้งเป็นตัวแรกของประเภทนั้น
+                  subset: list.includes(form.subset) ? form.subset : list[0] ?? form.subset,
+                });
+              }}
               className={input}
             >
               {SOURCES.map((s) => (
                 <option key={s}>{s}</option>
               ))}
             </select>
+          </div>
+          {/* 2) งาน/โปรเจกต์ (เดิม Subset) — ตัวเลือกขึ้นกับประเภทงาน */}
+          <div>
+            <label className={label}>2. งาน / โปรเจกต์</label>
+            <select
+              value={form.subset}
+              onChange={(e) => patch({ subset: e.target.value })}
+              className={input}
+            >
+              {SUBSETS.filter((s) => SUBSET_TO_SOURCE[s] === form.source).map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          {/* 3) รายการที่ขาย (เดิม Product, free text) */}
+          <div className="col-span-2">
+            <label className={label}>3. รายการที่ขาย (Product)</label>
+            <input
+              required
+              value={form.product}
+              onChange={(e) => patch({ product: e.target.value })}
+              className={input}
+              placeholder="เช่น Advertorial ESG, PR Post, VDO, Banner, บูธ, BT-Media"
+            />
           </div>
           <div>
             <label className={label}>Stage</label>
@@ -779,12 +863,24 @@ function OppFormModal({
             />
           </div>
           <div>
-            <label className={label}>Month (เช่น Mar-2026)</label>
-            <input
-              value={form.month}
-              onChange={(e) => patch({ month: e.target.value })}
+            <label className={label}>Month</label>
+            <select
+              value={MONTHS.includes(form.month) ? form.month : form.month ? "__other" : ""}
+              onChange={(e) => {
+                if (e.target.value !== "__other") patch({ month: e.target.value });
+              }}
               className={input}
-            />
+            >
+              <option value="">— เลือกเดือน —</option>
+              {MONTHS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+              {form.month && !MONTHS.includes(form.month) && (
+                <option value="__other">{form.month} (ค่าเดิม)</option>
+              )}
+            </select>
           </div>
           <div>
             <label className={label}>Close Date</label>

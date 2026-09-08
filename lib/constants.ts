@@ -63,6 +63,12 @@ export const FORECASTS = [
 
 export const NOTE_TYPES = ["Call", "Meeting", "Line", "Email"];
 
+// 12 months for the deal Month field + Month filter
+export const MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
 // Revenue plan (targets — NOT actuals). Do not recompute from deals.
 export const REVENUE_PLAN = {
   source: { Event: 60, Media: 40 } as Record<Source, number>, // % reference from last year

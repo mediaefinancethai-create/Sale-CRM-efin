@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   FORECASTS,
-  OWNERS,
   SEGMENTS,
   SOURCES,
   STAGES,
@@ -422,12 +421,55 @@ export function OpportunityDetailModal({
             <section>
               <label className={label}>รายละเอียดดีล (แก้ไขได้)</label>
               <div className="grid grid-cols-2 gap-2.5 rounded-xl bg-bg p-3">
+                {/* 1) ประเภทงาน (Source) */}
+                <div>
+                  <span className="mb-1 block text-[11px] text-muted">1. ประเภทงาน</span>
+                  <select
+                    value={form.source}
+                    onChange={(e) => {
+                      const source = e.target.value;
+                      const list: string[] = SUBSETS.filter(
+                        (s) => SUBSET_TO_SOURCE[s] === source
+                      );
+                      patch({
+                        source: source as typeof form.source,
+                        subset: (list.includes(form.subset)
+                          ? form.subset
+                          : list[0] ?? form.subset) as typeof form.subset,
+                      });
+                    }}
+                    className={fieldCls}
+                  >
+                    {SOURCES.map((s) => (
+                      <option key={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+                {/* 2) งาน/โปรเจกต์ (Subset) — ตามประเภทงาน */}
+                <div>
+                  <span className="mb-1 block text-[11px] text-muted">2. งาน / โปรเจกต์</span>
+                  <select
+                    value={form.subset}
+                    onChange={(e) =>
+                      patch({ subset: e.target.value as typeof form.subset })
+                    }
+                    className={fieldCls}
+                  >
+                    {SUBSETS.filter((s) => SUBSET_TO_SOURCE[s] === form.source).map(
+                      (s) => (
+                        <option key={s}>{s}</option>
+                      )
+                    )}
+                  </select>
+                </div>
+                {/* 3) รายการที่ขาย (Product) */}
                 <div className="col-span-2">
-                  <span className="mb-1 block text-[11px] text-muted">Product / แพ็ก</span>
+                  <span className="mb-1 block text-[11px] text-muted">3. รายการที่ขาย (Product)</span>
                   <input
                     value={form.product}
                     onChange={(e) => patch({ product: e.target.value })}
                     className={fieldCls}
+                    placeholder="เช่น Advertorial ESG, PR Post, VDO, Banner, บูธ"
                   />
                 </div>
                 <div>
@@ -482,36 +524,6 @@ export function OpportunityDetailModal({
                   </select>
                 </div>
                 <div>
-                  <span className="mb-1 block text-[11px] text-muted">Subset</span>
-                  <select
-                    value={form.subset}
-                    onChange={(e) =>
-                      patch({
-                        subset: e.target.value as typeof form.subset,
-                        source: (SUBSET_TO_SOURCE[e.target.value] ??
-                          form.source) as typeof form.source,
-                      })
-                    }
-                    className={fieldCls}
-                  >
-                    {SUBSETS.map((s) => (
-                      <option key={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <span className="mb-1 block text-[11px] text-muted">Source</span>
-                  <select
-                    value={form.source}
-                    onChange={(e) => patch({ source: e.target.value as typeof form.source })}
-                    className={fieldCls}
-                  >
-                    {SOURCES.map((s) => (
-                      <option key={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
                   <span className="mb-1 block text-[11px] text-muted">Owner (AE)</span>
                   <select
                     value={form.owner}
@@ -519,23 +531,34 @@ export function OpportunityDetailModal({
                     className={fieldCls}
                   >
                     <option value="">—</option>
-                    {OWNERS.map((o) => (
-                      <option key={o}>{o}</option>
-                    ))}
+                    {form.owner &&
+                      !allProfiles.some(
+                        (p) => (p.full_name?.trim() || p.email) === form.owner
+                      ) && <option value={form.owner}>{form.owner}</option>}
+                    {allProfiles.map((p) => {
+                      const lbl = p.full_name?.trim() || p.email || "—";
+                      return (
+                        <option key={p.id} value={lbl}>
+                          {lbl}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
                 <div>
                   <span className="mb-1 block text-[11px] text-muted">Segment</span>
-                  <select
+                  <input
+                    list="deal-detail-segment-options"
                     value={form.segment}
                     onChange={(e) => patch({ segment: e.target.value })}
                     className={fieldCls}
-                  >
-                    <option value="">—</option>
+                    placeholder="เลือก/พิมพ์ได้"
+                  />
+                  <datalist id="deal-detail-segment-options">
                     {SEGMENTS.map((s) => (
-                      <option key={s}>{s}</option>
+                      <option key={s} value={s} />
                     ))}
-                  </select>
+                  </datalist>
                 </div>
                 <div>
                   <span className="mb-1 block text-[11px] text-muted">Close date</span>

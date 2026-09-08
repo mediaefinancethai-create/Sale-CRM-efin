@@ -17,7 +17,7 @@ export default async function OpportunitiesPage() {
         .order("deal_no", { ascending: true }),
       supabase
         .from("accounts")
-        .select("id, name, legacy_id, segment")
+        .select("id, name, legacy_id, segment, symbol")
         .order("name"),
       supabase
         .from("profiles")
@@ -29,7 +29,7 @@ export default async function OpportunitiesPage() {
     <OpportunitiesView
       profile={profile}
       opportunities={(opps ?? []) as Opportunity[]}
-      accounts={(accounts ?? []) as Pick<Account, "id" | "name" | "legacy_id" | "segment">[]}
+      accounts={(accounts ?? []) as Pick<Account, "id" | "name" | "legacy_id" | "segment" | "symbol">[]}
       users={(users ?? []) as OwnerUser[]}
     />
   );
