@@ -4,12 +4,14 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { STAGES, type Stage } from "@/lib/constants";
 
-// Kanban drop → persist stage (Closed Won forces probability/forecast, per prototype)
-export async function moveOppStage(id: string, stage: Stage) {
+// Kanban drop → persist stage (Closed Won forces probability/forecast, per prototype).
+// `month` = the month the drag happened → stamp it so the deal shows in that month's filter.
+export async function moveOppStage(id: string, stage: Stage, month?: string) {
   if (!STAGES.includes(stage)) return { error: "invalid stage" };
   const supabase = createClient();
 
   const patch: Record<string, unknown> = { stage };
+  if (month) patch.month = month;
   if (stage === "Closed Won") {
     patch.probability = 100;
     patch.forecast = "Closed Won";

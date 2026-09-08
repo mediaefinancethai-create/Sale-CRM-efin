@@ -69,6 +69,26 @@ export const MONTHS = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
+// Years for the deal Year field + Year filter: 2023 → current year + 3 (auto-extends)
+export const YEARS: string[] = (() => {
+  const start = 2023;
+  const end = Math.max(2026, new Date().getFullYear()) + 3;
+  const arr: string[] = [];
+  for (let y = start; y <= end; y++) arr.push(String(y));
+  return arr;
+})();
+
+// combine a month name + year into the stored "MMM-YYYY" (or partial)
+export function combineMonthYear(monthName: string, year: string): string {
+  if (monthName && year) return `${monthName}-${year}`;
+  return monthName || year || "";
+}
+// pull the 4-digit year out of a stored month string, if any
+export function yearOf(monthField: string | null | undefined): string | null {
+  const m = (monthField ?? "").match(/(\d{4})/);
+  return m ? m[1] : null;
+}
+
 // Revenue plan (targets — NOT actuals). Do not recompute from deals.
 export const REVENUE_PLAN = {
   source: { Event: 60, Media: 40 } as Record<Source, number>, // % reference from last year

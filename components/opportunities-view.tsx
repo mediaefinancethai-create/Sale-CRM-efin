@@ -8,12 +8,15 @@ import {
   FORECASTS,
   KANBAN_LANES,
   MONTHS,
+  YEARS,
   SEGMENTS,
   SOURCES,
   STAGES,
   SUBSETS,
   SUBSET_TO_SOURCE,
   baht,
+  combineMonthYear,
+  yearOf,
   type Stage,
 } from "@/lib/constants";
 import { canModify } from "@/lib/rbac";
@@ -40,6 +43,7 @@ function ownerLabel(u: UserLite): string {
 }
 
 interface Filters {
+  year: string;
   month: string;
   owner: string;
   source: string;
@@ -49,6 +53,7 @@ interface Filters {
 }
 
 const EMPTY_FILTERS: Filters = {
+  year: "",
   month: "",
   owner: "",
   source: "",
@@ -87,6 +92,10 @@ export function OpportunitiesView({
   const preStage = useMemo(() => {
     const q = filters.search.trim().toLowerCase();
     return opportunities.filter((o) => {
+      if (filters.year) {
+        const y = yearOf(o.month) ?? (o.close_date ?? "").slice(0, 4);
+        if (y !== filters.year) return false;
+      }
       if (
         filters.month &&
         !(o.month ?? "").toLowerCase().startsWith(filters.month.toLowerCase())
@@ -128,8 +137,11 @@ export function OpportunitiesView({
     e.preventDefault();
     const id = e.dataTransfer.getData("text/plain");
     if (!id) return;
+    // stamp the year + month the card was moved in (current browser date)
+    const now = new Date();
+    const month = combineMonthYear(MONTHS[now.getMonth()], String(now.getFullYear()));
     startTransition(async () => {
-      const res = await moveOppStage(id, stage);
+      const res = await moveOppStage(id, stage, month);
       if (res.error) alert(`ย้าย stage ไม่สำเร็จ: ${res.error}`);
     });
   }
@@ -162,6 +174,16 @@ export function OpportunitiesView({
       {/* filter bar */}
       <div className="flex flex-wrap gap-2">
         <select
+          value={filters.year}
+          onChange={(e) => set("year", e.target.value)}
+          className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-sm"
+        >
+          <option value="">ทุกปี</option>
+          {YEARS.map((y) => (
+            <option key={y}>{y}</option>
+          ))}
+        </select>
+        <select
           value={filters.month}
           onChange={(e) => set("month", e.target.value)}
           className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-sm"
@@ -186,7 +208,7 @@ export function OpportunitiesView({
           onChange={(e) => set("source", e.target.value)}
           className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-sm"
         >
-          <option value="">ทุก source</option>
+          <option value="">All Product</option>
           {SOURCES.map((s) => (
             <option key={s}>{s}</option>
           ))}
@@ -196,7 +218,7 @@ export function OpportunitiesView({
           onChange={(e) => set("subset", e.target.value)}
           className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-sm"
         >
-          <option value="">ทุก subset</option>
+          <option value="">All Project</option>
           {SUBSETS.map((s) => (
             <option key={s}>{s}</option>
           ))}
@@ -863,23 +885,43 @@ function OppFormModal({
             />
           </div>
           <div>
+            <label className={label}>Year</label>
+            <select
+              value={yearOf(form.month) ?? ""}
+              onChange={(e) =>
+                patch({
+                  month: combineMonthYear(
+                    MONTHS.find((m) => form.month.startsWith(m)) ?? "",
+                    e.target.value
+                  ),
+                })
+              }
+              className={input}
+            >
+              <option value="">— เลือกปี —</option>
+              {YEARS.map((y) => (
+                <option key={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+          <div>
             <label className={label}>Month</label>
             <select
-              value={MONTHS.includes(form.month) ? form.month : form.month ? "__other" : ""}
-              onChange={(e) => {
-                if (e.target.value !== "__other") patch({ month: e.target.value });
-              }}
+              value={MONTHS.find((m) => form.month.startsWith(m)) ?? ""}
+              onChange={(e) =>
+                patch({
+                  month: combineMonthYear(
+                    e.target.value,
+                    yearOf(form.month) ?? ""
+                  ),
+                })
+              }
               className={input}
             >
               <option value="">— เลือกเดือน —</option>
               {MONTHS.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
+                <option key={m}>{m}</option>
               ))}
-              {form.month && !MONTHS.includes(form.month) && (
-                <option value="__other">{form.month} (ค่าเดิม)</option>
-              )}
             </select>
           </div>
           <div>

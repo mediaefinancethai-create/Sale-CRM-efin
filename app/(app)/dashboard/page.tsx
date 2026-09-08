@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { baht, REVENUE_PLAN } from "@/lib/constants";
 import type { Opportunity } from "@/lib/types";
 import { BarRows, Card, Kpi, StagePill } from "@/components/ui";
+import { SubsetRevenue } from "@/components/subset-revenue";
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -24,22 +25,6 @@ export default async function DashboardPage() {
     won.length + lost.length > 0
       ? Math.round((won.length / (won.length + lost.length)) * 100)
       : 0;
-
-  // actual Closed Won per subset (for Actual vs Target)
-  const wonBySubset: Record<string, number> = {};
-  for (const o of won) {
-    if (o.subset)
-      wonBySubset[o.subset] = (wonBySubset[o.subset] ?? 0) + Number(o.amount || 0);
-  }
-  // pair actual subsets with REVENUE_PLAN targets (target key "media" = efinancethai)
-  const subsetActualVsTarget = [
-    { label: "better trade", actual: wonBySubset["better trade"] ?? 0, target: REVENUE_PLAN.subset["better trade"] },
-    { label: "efinancethai (media)", actual: wonBySubset["efinancethai"] ?? 0, target: REVENUE_PLAN.subset["media"] },
-    { label: "crypto", actual: wonBySubset["crypto"] ?? 0, target: REVENUE_PLAN.subset["crypto"] },
-    { label: "esg", actual: wonBySubset["esg"] ?? 0, target: REVENUE_PLAN.subset["esg"] },
-    { label: "efin Let Profit Run", actual: wonBySubset["efin Let Profit Run"] ?? 0, target: REVENUE_PLAN.subset["efin Let Profit Run"] },
-    { label: "Capital Drive Golf 2026", actual: wonBySubset["Capital Drive Golf 2026"] ?? 0, target: REVENUE_PLAN.subset["Capital Drive Golf 2026"] },
-  ];
 
   // urgent: open deals with a next action due today or overdue
   const today = new Date().toLocaleDateString("en-CA");
@@ -93,7 +78,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="Revenue Source Split" pill="เป้าหมาย (อ้างอิงปีก่อน)">
+        <Card title="Product Revenue" pill="เป้าหมาย (อ้างอิงปีก่อน)">
           <BarRows
             rows={Object.entries(REVENUE_PLAN.source).map(([label, v]) => ({
               label,
@@ -102,35 +87,13 @@ export default async function DashboardPage() {
             }))}
           />
         </Card>
-        <Card title="Revenue Subset Split" pill="Actual เทียบ เป้าหมายปีนี้">
-          <div className="space-y-3.5">
-            {subsetActualVsTarget.map((r) => {
-              const pct = r.target > 0 ? (r.actual / r.target) * 100 : 0;
-              return (
-                <div key={r.label}>
-                  <div className="mb-1 flex items-baseline justify-between gap-2 text-xs">
-                    <span className="font-medium">{r.label}</span>
-                    <span className="text-muted">
-                      ฿{baht(r.actual)} / ฿{baht(r.target)}{" "}
-                      <span className="font-semibold text-navy">
-                        ({pct.toFixed(2)}%)
-                      </span>
-                    </span>
-                  </div>
-                  <div className="h-2.5 overflow-hidden rounded-full bg-soft">
-                    <div
-                      className="h-full rounded-full bg-brand"
-                      style={{ width: `${Math.min(pct, 100)}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <p className="mt-3 text-[11px] text-muted">
-            แท่ง = สัดส่วน Actual (Closed Won) เทียบเป้าปีนี้ · target &quot;media&quot; = efinancethai
-          </p>
-        </Card>
+        <SubsetRevenue
+          won={won.map((o) => ({
+            subset: o.subset,
+            product: o.product,
+            amount: Number(o.amount || 0),
+          }))}
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
